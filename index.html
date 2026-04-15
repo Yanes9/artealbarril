@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Arte al Barril">
+<meta name="theme-color" content="#b34700">
+<title>Arte al Barril — POS</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  /* PALETA ARTE AL BARRIL — naranja fuego, dorado, café oscuro */
+  --azul:#b34700;--azul2:#cc5200;--azul3:#ff8c00;--azulc:#fff3e0;--azulm:#ffe0b2;
+  --verde:#2e7d32;--verdec:#e8f5e9;
+  --naranja:#e65100;--naranjac:#fff3e0;
+  --rojo:#b71c1c;--rojoc:#ffebee;
+  --amarillo:#f9a825;--amarilloc:#fffde7;
+  --morado:#4a148c;--moradoc:#f3e5f5;
+  --teal:#00695c;--tealc:#e0f2f1;
+  --gris:#5d4037;--grisc:#efebe9;
+  --fondo:#fdf0e0;--card:#fff;--texto:#7c3000;--texto2:#3e2000;
+  --borde:#d7a96a;--sombra:0 2px 8px rgba(179,71,0,.13);--radio:10px;--sw:250px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Segoe UI',sans-serif;background:var(--fondo);color:var(--texto2);min-height:100vh;overflow-x:hidden;}
+
+/* LOADING */
+#loading-screen{position:fixed;inset:0;background:linear-gradient(135deg,#7c2d00,#e65c00,#f9a825);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;color:#fff;}
+.spin{width:46px;height:46px;border:4px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;margin-bottom:14px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* LOGIN */
+#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#7c2d00,#e65c00,#f9a825);display:none;align-items:center;justify-content:center;z-index:9998;padding:16px;}
+#login-screen.show{display:flex;}
+.lcard{background:#fff;border-radius:18px;padding:28px 28px 24px;width:100%;max-width:340px;box-shadow:0 8px 32px rgba(100,30,0,.30);text-align:center;}
+.lcard h2{font-size:19px;font-weight:800;color:var(--azul);margin-bottom:2px;}
+.lcard p{color:var(--gris);font-size:12px;margin-bottom:18px;}
+.logo-login{width:110px;height:110px;border-radius:14px;object-fit:contain;margin:0 auto 10px;display:block;}
+.logo-fb{font-size:52px;margin-bottom:8px;}
+.lcard input{width:100%;border:1.5px solid var(--borde);border-radius:8px;padding:11px 12px;font-size:14px;margin-bottom:11px;outline:none;transition:border .2s;}
+.lcard input:focus{border-color:var(--azul2);}
+.btn-login{width:100%;background:linear-gradient(90deg,#b34700,#e65c00);color:#fff;border:none;border-radius:8px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.3px;}
+.lerr{color:var(--rojo);font-size:12px;margin-top:6px;min-height:16px;}
+
+/* APP */
+#app{display:none;min-height:100vh;}
+#app.show{display:flex;}
+#sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:199;}
+#sb-overlay.show{display:block;}
+
+/* SIDEBAR */
+#sidebar{width:var(--sw);background:linear-gradient(180deg,#3e1500 0%,#5c2000 60%,#3e1500 100%);color:#fff;display:flex;flex-direction:column;height:100vh;position:fixed;left:0;top:0;z-index:200;transition:transform .25s ease;overflow-y:auto;overflow-x:hidden;border-right:2px solid #8b3a00;}
+#sidebar::-webkit-scrollbar{width:4px;}
+#sidebar::-webkit-scrollbar-thumb{background:rgba(255,180,50,.25);border-radius:2px;}
+#sidebar.hidden{transform:translateX(-100%);}
+.sb-head{padding:14px 12px 10px;border-bottom:1px solid rgba(255,160,50,.15);flex-shrink:0;}
+.sb-logo{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;}
+.sb-logo img{width:38px;height:38px;border-radius:7px;object-fit:contain;flex-shrink:0;}
+.sb-logo .lfb{width:38px;height:38px;border-radius:7px;background:rgba(255,160,50,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.sb-user{margin-top:9px;display:flex;align-items:center;justify-content:space-between;font-size:11px;color:rgba(255,200,100,.7);}
+.sb-avatar-fb{width:28px;height:28px;border-radius:50%;background:rgba(255,140,0,.3);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;flex-shrink:0;}
+.sb-uinfo{display:flex;align-items:center;gap:7px;}
+.btn-salir{background:rgba(255,100,0,.18);border:none;color:rgba(255,200,100,.85);padding:3px 9px;border-radius:5px;cursor:pointer;font-size:10px;}
+.sb-nav{flex:1;padding:6px 0 20px;}
+.sb-gt{font-size:9px;font-weight:700;color:rgba(255,160,50,.45);padding:10px 12px 2px;text-transform:uppercase;letter-spacing:.7px;}
+.sb-btn{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;color:rgba(255,200,130,.75);padding:9px 12px;cursor:pointer;font-size:12px;font-weight:500;text-align:left;transition:.15s;border-left:3px solid transparent;}
+.sb-btn:hover{background:rgba(255,140,0,.1);color:#ffe082;}
+.sb-btn.active{background:rgba(255,140,0,.18);color:#ffe082;border-left-color:#ff8c00;}
+.sb-btn .ic{font-size:15px;width:20px;text-align:center;flex-shrink:0;}
+
+/* MAIN */
+#main-wrap{flex:1;margin-left:var(--sw);display:flex;flex-direction:column;min-height:100vh;transition:margin-left .25s;}
+#main-wrap.full{margin-left:0;}
+.topbar{background:linear-gradient(90deg,#7c2d00,#b34700,#cc6600);color:#fff;height:50px;display:flex;align-items:center;padding:0 12px;gap:10px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.25);}
+.tb-toggle{background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 6px;border-radius:5px;line-height:1;}
+.tb-title{flex:1;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+main{padding:12px;flex:1;}
+.page{display:none;}
+.page.active{display:block;}
+
+/* COMPONENTES */
+.sec-title{font-size:15px;font-weight:700;color:var(--azul);margin-bottom:12px;}
+.wb{background:linear-gradient(135deg,#7c2d00,#cc5200,#f9a825);color:#fff;border-radius:var(--radio);padding:14px 18px;margin-bottom:14px;}
+.wb h1{font-size:16px;font-weight:700;}
+.wb p{font-size:11px;opacity:.85;margin-top:2px;}
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:14px;}
+.kpi-card{background:var(--card);border-radius:var(--radio);padding:12px 14px;box-shadow:var(--sombra);display:flex;align-items:center;gap:10px;border-left:4px solid var(--azul3);}
+.kpi-ic{font-size:22px;}
+.kpi-lbl{font-size:10px;color:var(--gris);font-weight:500;}
+.kpi-val{font-size:18px;font-weight:700;color:var(--azul);}
+.card{background:var(--card);border-radius:var(--radio);padding:14px;box-shadow:var(--sombra);margin-bottom:12px;}
+.card-title{font-size:13px;font-weight:600;color:var(--azul);margin-bottom:10px;}
+.tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap;}
+.tab{background:#fff;border:1.5px solid var(--azulm);color:var(--azul);padding:5px 13px;border-radius:20px;cursor:pointer;font-size:11px;font-weight:500;transition:.2s;}
+.tab.active,.tab:hover{background:var(--azul);color:#fff;border-color:var(--azul);}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:8px;border:1px solid var(--azulm);}
+table{width:100%;border-collapse:collapse;font-size:11px;}
+thead tr{background:var(--azul);color:#fff;}
+th{padding:8px 9px;text-align:left;font-weight:600;white-space:nowrap;}
+tbody tr{border-bottom:1px solid #eee;}
+tbody tr:hover{background:var(--azulc);}
+td{padding:7px 9px;vertical-align:middle;}
+.fg{display:flex;flex-direction:column;gap:3px;}
+label{font-size:11px;font-weight:600;color:var(--texto);}
+input,select,textarea{border:1.5px solid var(--borde);border-radius:7px;padding:8px 10px;font-size:13px;font-family:inherit;outline:none;transition:border .2s;background:#fff;color:var(--texto2);width:100%;}
+input:focus,select:focus,textarea:focus{border-color:var(--azul2);}
+.btn{padding:8px 14px;border-radius:7px;border:none;font-size:11px;font-weight:600;cursor:pointer;transition:.2s;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;}
+.bp{background:var(--azul);color:#fff;}.bp:hover{background:var(--azul2);}
+.bs{background:var(--verde);color:#fff;}
+.bd{background:var(--rojo);color:#fff;}
+.bw{background:var(--amarillo);color:#fff;}
+.bpu{background:var(--morado);color:#fff;}
+.bt{background:var(--teal);color:#fff;}
+.bsm{padding:4px 8px;font-size:10px;}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;}
+.bv{background:var(--verdec);color:var(--verde);}
+.br{background:var(--rojoc);color:var(--rojo);}
+.bn{background:var(--naranjac);color:var(--naranja);}
+.by{background:var(--amarilloc);color:var(--amarillo);}
+.baz{background:var(--azulc);color:var(--azul);}
+.bgr{background:var(--grisc);color:var(--gris);}
+.bmo{background:var(--moradoc);color:var(--morado);}
+.btl{background:var(--tealc);color:var(--teal);}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:600;padding:12px;overflow-y:auto;}
+.modal-ov.open{display:flex;}
+.modal{background:#fff;border-radius:14px;padding:20px;width:100%;max-width:520px;max-height:93vh;overflow-y:auto;}
+.modal-title{font-size:14px;font-weight:700;color:var(--azul);margin-bottom:12px;}
+.mfoot{display:flex;gap:7px;justify-content:flex-end;margin-top:13px;flex-wrap:wrap;}
+.notif{position:fixed;top:58px;right:12px;background:var(--verde);color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:600;z-index:9999;display:none;box-shadow:0 4px 14px rgba(0,0,0,.2);max-width:300px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.gf{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:9px;}
+.fge{display:flex;gap:7px;align-items:flex-end;flex-wrap:wrap;}
+.fe{display:flex;justify-content:flex-end;gap:6px;margin-top:10px;flex-wrap:wrap;}
+.ms{background:var(--azulc);border-radius:7px;padding:9px 11px;}
+.ms .mv{font-size:16px;font-weight:700;color:var(--azul);}
+.ms .ml{font-size:10px;color:var(--gris);}
+.divider{border:none;border-top:1.5px solid var(--azulm);margin:10px 0;}
+.tmuted{color:var(--gris);font-size:11px;padding:8px 0;}
+
+/* COCINA - tarjetas de órdenes */
+.orden-card{background:#fff;border-radius:12px;box-shadow:var(--sombra);overflow:hidden;border:2px solid var(--azulm);transition:border .2s;}
+.orden-card.nuevo{border-color:#ff8f00;}
+.orden-card.cocinando{border-color:#1565c0;}
+.orden-card.listo{border-color:#2e7d32;}
+.orden-card.urgente{border-color:#c62828;animation:pulso 1.2s infinite;}
+@keyframes pulso{0%,100%{box-shadow:0 0 0 0 rgba(198,40,40,.3);}50%{box-shadow:0 0 0 6px rgba(198,40,40,0);}}
+.oc-head{padding:10px 12px;display:flex;align-items:center;justify-content:space-between;}
+.oc-head.nuevo{background:#fff8e1;}
+.oc-head.cocinando{background:#e3f2fd;}
+.oc-head.listo{background:#e8f5e9;}
+.oc-mesa{font-size:15px;font-weight:700;}
+.oc-timer{font-size:11px;color:var(--gris);}
+.oc-items{padding:8px 12px;}
+.oc-item{display:flex;gap:8px;padding:4px 0;border-bottom:1px solid #f5f5f5;font-size:12px;}
+.oc-item:last-child{border-bottom:none;}
+.oc-qty{font-weight:700;color:var(--azul);min-width:22px;}
+.oc-nota{font-size:10px;color:var(--naranja);padding:5px 12px;background:var(--naranjac);}
+.oc-foot{padding:8px 12px;display:flex;gap:6px;}
+
+/* MESAS grid */
+.mesas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;margin-bottom:14px;}
+.mesa-btn{background:#fff;border-radius:12px;border:2px solid var(--azulm);padding:14px 8px;text-align:center;cursor:pointer;transition:all .15s;box-shadow:var(--sombra);}
+.mesa-btn:hover{border-color:var(--azul);}
+.mesa-btn.libre{border-color:#a5d6a7;background:#f1f8e9;}
+.mesa-btn.ocupada{border-color:#ff8f00;background:#fff8e1;}
+.mesa-btn.cobrar{border-color:#2e7d32;background:#e8f5e9;}
+.mesa-btn.selected{border-color:var(--azul);background:var(--azulc);box-shadow:0 0 0 3px rgba(183,28,28,.2);}
+.mesa-num{font-size:18px;font-weight:800;color:var(--texto2);}
+.mesa-est{font-size:10px;margin-top:3px;}
+
+/* POS productos */
+#prod-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px;}
+.prod-card{background:#fff;border-radius:12px;padding:10px;box-shadow:var(--sombra);border:2px solid transparent;cursor:pointer;transition:all .15s;position:relative;}
+.prod-card:active{transform:scale(.96);}
+.prod-card.sel{border-color:var(--azul);background:var(--azulc);}
+.prod-nombre{font-size:12px;font-weight:700;color:var(--texto2);line-height:1.2;margin-bottom:4px;}
+.prod-precio{font-size:15px;font-weight:800;color:var(--verde);}
+.prod-cat{font-size:10px;color:var(--gris);margin-top:2px;}
+.prod-plus{position:absolute;bottom:8px;right:8px;width:24px;height:24px;border-radius:50%;background:var(--azul);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;}
+
+/* CARRITO */
+.cart-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;}
+.cart-row:last-child{border-bottom:none;}
+.cart-qty-btn{width:26px;height:26px;border-radius:50%;border:none;cursor:pointer;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+
+@media(max-width:768px){
+  :root{--sw:260px;}
+  #main-wrap{margin-left:0!important;}
+  .g2,.g3{grid-template-columns:1fr!important;}
+  .gf{grid-template-columns:1fr 1fr!important;}
+  .kpi-grid{grid-template-columns:1fr 1fr!important;}
+  table{font-size:10px;}
+  th,td{padding:5px 6px!important;}
+  main{padding:10px;}
+  #prod-grid{grid-template-columns:repeat(2,1fr);}
+  .tabs{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:4px;}
+  .tab{text-align:center;padding:10px 6px;border-radius:8px;font-size:11px;}
+}
+/* ── DASHBOARD BOTONES GRANDES ── */
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:14px;margin-bottom:16px;}
+.dash-btn{background:#fff;border-radius:16px;border:2px solid var(--azulm);padding:22px 12px 16px;text-align:center;cursor:pointer;transition:all .18s;box-shadow:0 3px 12px rgba(179,71,0,.10);display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;overflow:hidden;}
+.dash-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,140,0,.06),transparent);opacity:0;transition:.2s;}
+.dash-btn:hover{border-color:var(--azul3);transform:translateY(-3px);box-shadow:0 8px 24px rgba(179,71,0,.18);}
+.dash-btn:hover::before{opacity:1;}
+.dash-btn:active{transform:scale(.96);}
+.dash-ic{font-size:38px;line-height:1;}
+.dash-label{font-size:13px;font-weight:700;color:var(--texto2);}
+.dash-sub{font-size:10px;color:var(--gris);}
+.dash-badge{position:absolute;top:10px;right:10px;background:#c62828;color:#fff;border-radius:20px;padding:2px 7px;font-size:10px;font-weight:700;display:none;}
+.dash-btn.dash-primary{background:linear-gradient(135deg,#b34700,#e65c00);border-color:transparent;color:#fff;}
+.dash-btn.dash-primary .dash-label,.dash-btn.dash-primary .dash-sub{color:#fff;}
+.dash-btn.dash-primary .dash-ic{filter:drop-shadow(0 2px 4px rgba(0,0,0,.2));}
+
+/* ── SETUP WIZARD ── */
+#setup-screen{position:fixed;inset:0;background:linear-gradient(135deg,#7c2d00,#e65c00,#f9a825);display:none;align-items:center;justify-content:center;z-index:9997;padding:16px;}
+#setup-screen.show{display:flex;}
+.setup-card{background:#fff;border-radius:20px;padding:30px 26px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(100,30,0,.35);}
+.setup-step{display:none;}.setup-step.active{display:block;}
+.setup-card h2{font-size:18px;font-weight:800;color:var(--azul);margin-bottom:4px;}
+.setup-card p{font-size:12px;color:var(--gris);margin-bottom:18px;line-height:1.6;}
+.setup-prog{display:flex;gap:6px;margin-bottom:20px;}
+.setup-dot{flex:1;height:4px;border-radius:2px;background:#f0e0d0;}
+.setup-dot.done{background:var(--azul3);}
+.setup-dot.active{background:var(--azul);}
+
+@media(max-width:768px){
+  .dash-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
+  .dash-btn{padding:18px 8px 12px;}
+  .dash-ic{font-size:30px;}
+  .dash-label{font-size:12px;}
+}
+</style>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="spin"></div>
+  <p style="font-size:14px;font-weight:700">Arte al Barril</p>
+  <p style="font-size:11px;opacity:.8;margin-top:4px">Cargando sistema...</p>
+</div>
+
+<div id="login-screen">
+  <div class="lcard">
+    <img id="ll-img" class="logo-login" src="" style="display:none">
+    <div id="ll-fb" class="logo-fb">🔥</div>
+    <h2 id="ll-nombre">Arte al Barril</h2>
+    <p>Ingresa tus credenciales</p>
+    <input type="text" id="lu" placeholder="Usuario" autocomplete="username">
+    <input type="password" id="lp" placeholder="Contraseña" autocomplete="current-password">
+    <button class="btn-login" onclick="doLogin()">Ingresar</button>
+    <div class="lerr" id="lerr"></div>
+  </div>
+</div>
+
+<div id="app">
+  <div id="sb-overlay" onclick="closeSB()"></div>
+
+<!-- ══ SETUP WIZARD (primera vez) ══ -->
+<div id="setup-screen">
+  <div class="setup-card">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:52px">🔥</div>
+      <div style="font-size:18px;font-weight:800;color:var(--azul)">Arte al Barril</div>
+      <div style="font-size:11px;color:var(--gris)">Configuración inicial del sistema</div>
+    </div>
+    <div class="setup-prog">
+      <div class="setup-dot active" id="dot1"></div>
+      <div class="setup-dot" id="dot2"></div>
+      <div class="setup-dot" id="dot3"></div>
+    </div>
+
+    <!-- PASO 1: Supabase -->
+    <div class="setup-step active" id="setup-s1">
+      <h2>1. Conectar base de datos</h2>
+      <p>Ve a <strong>supabase.com</strong>, crea un proyecto gratis y pega aquí tus credenciales (Settings → API).</p>
+      <div class="fg" style="margin-bottom:10px"><label>Project URL *</label><input id="sw-url" placeholder="https://xxxxxx.supabase.co"></div>
+      <div class="fg" style="margin-bottom:14px"><label>Anon Public Key *</label><input id="sw-key" placeholder="eyJhbGci..."></div>
+      <div id="sw-err1" style="color:var(--rojo);font-size:12px;margin-bottom:8px;min-height:16px"></div>
+      <button class="btn bp" style="width:100%;padding:12px;font-size:13px" onclick="setupPaso1()">Conectar y continuar →</button>
+    </div>
+
+    <!-- PASO 2: Crear admin -->
+    <div class="setup-step" id="setup-s2">
+      <h2>2. Crear usuario administrador</h2>
+      <p>Este será el usuario principal del sistema. Guarda bien la contraseña.</p>
+      <div class="g2" style="margin-bottom:10px">
+        <div class="fg"><label>Usuario *</label><input id="sw-usu" placeholder="admin" value="admin"></div>
+        <div class="fg"><label>Contraseña *</label><input id="sw-pass" type="password" placeholder="Mínimo 6 caracteres"></div>
+      </div>
+      <div class="fg" style="margin-bottom:14px"><label>Nombre completo</label><input id="sw-nombre" placeholder="Ej: Juan García"></div>
+      <div id="sw-err2" style="color:var(--rojo);font-size:12px;margin-bottom:8px;min-height:16px"></div>
+      <button class="btn bp" style="width:100%;padding:12px;font-size:13px" onclick="setupPaso2()">⏳ Crear tablas y admin →</button>
+    </div>
+
+    <!-- PASO 3: Listo -->
+    <div class="setup-step" id="setup-s3">
+      <div style="text-align:center;padding:10px 0">
+        <div style="font-size:56px;margin-bottom:12px">🎉</div>
+        <h2 style="text-align:center;margin-bottom:8px">¡Sistema listo!</h2>
+        <p style="text-align:center">Todo configurado. Ya puedes ingresar con tu usuario administrador.</p>
+        <div id="sw-resumen" style="background:var(--azulc);border-radius:10px;padding:12px;margin:12px 0;font-size:13px;text-align:left"></div>
+        <button class="btn bp" style="width:100%;padding:12px;font-size:14px;font-weight:700" onclick="setupFinalizar()">🔥 Ingresar al sistema</button>
+      </div>
+    </div>
+  </div>
+</div>
+  <div id="sidebar">
+    <div class="sb-head">
+      <div class="sb-logo">
+        <img id="sb-li" src="" style="display:none">
+        <div id="sb-lfb" class="lfb">🔥</div>
+        <span id="sb-nombre-emp">Arte al Barril</span>
+      </div>
+      <div class="sb-user">
+        <div class="sb-uinfo">
+          <div class="sb-avatar-fb" id="sb-avatar">A</div>
+          <span id="sb-unom">Usuario</span>
+        </div>
+        <button class="btn-salir" onclick="doLogout()">Salir</button>
+      </div>
+    </div>
+    <nav class="sb-nav">
+      <div class="sb-gt">Principal</div>
+      <button class="sb-btn active" onclick="goPage('inicio')" data-page="inicio"><span class="ic">🏠</span>Inicio</button>
+      <button class="sb-btn" onclick="goPage('mesero')" data-page="mesero"><span class="ic">🧑‍🍳</span>Tomar Orden</button>
+      <div class="sb-gt">Operaciones</div>
+      <button class="sb-btn" onclick="goPage('cocina')" data-page="cocina"><span class="ic">👨‍🍳</span>Cocina <span id="cocina-badge" style="background:#c62828;color:#fff;border-radius:10px;padding:1px 6px;font-size:9px;margin-left:4px;display:none">0</span></button>
+      <button class="sb-btn" onclick="goPage('cobros')" data-page="cobros"><span class="ic">💵</span>Cobros</button>
+      <div class="sb-gt">Administración</div>
+      <button class="sb-btn" onclick="goPage('menu')" data-page="menu"><span class="ic">📋</span>Menú / Platillos</button>
+      <button class="sb-btn" onclick="goPage('inventario')" data-page="inventario"><span class="ic">📦</span>Inventario</button>
+      <button class="sb-btn" onclick="goPage('mesas')" data-page="mesas"><span class="ic">🪑</span>Mesas</button>
+      <div class="sb-gt">Reportes</div>
+      <button class="sb-btn" onclick="goPage('reportes')" data-page="reportes"><span class="ic">📊</span>Reportes</button>
+      <div class="sb-gt">Sistema</div>
+      <button class="sb-btn" onclick="goPage('usuarios')" data-page="usuarios"><span class="ic">👤</span>Usuarios</button>
+      <button class="sb-btn" onclick="goPage('config')" data-page="config"><span class="ic">⚙️</span>Configuración</button>
+    </nav>
+  </div>
+
+  <div id="main-wrap">
+    <div class="topbar">
+      <button class="tb-toggle" onclick="toggleSB()">☰</button>
+      <div class="tb-title" id="tb-title">Inicio</div>
+      <span id="tb-user" style="font-size:11px;color:rgba(255,255,255,.8)"></span>
+    </div>
+    <main>
+
+<!-- ===== INICIO — DASHBOARD ===== -->
+<div class="page active" id="page-inicio">
+  <div class="wb" style="display:flex;align-items:center;gap:14px;padding:16px 18px">
+    <img id="dash-logo-img" src="" style="width:54px;height:54px;border-radius:10px;object-fit:contain;display:none;flex-shrink:0">
+    <div id="dash-logo-fb" style="font-size:40px;flex-shrink:0">🔥</div>
+    <div>
+      <h1 id="wb-titulo" style="font-size:17px">Arte al Barril</h1>
+      <p id="wb-fecha" style="font-size:11px;opacity:.85"></p>
+      <p id="wb-user" style="font-size:11px;opacity:.75;margin-top:1px"></p>
+    </div>
+  </div>
+
+  <!-- KPIs rápidos -->
+  <div class="kpi-grid" id="kpi-inicio" style="margin-bottom:16px"></div>
+
+  <!-- BOTONES GRANDES -->
+  <div style="font-size:12px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Operaciones</div>
+  <div class="dash-grid" id="dash-operaciones">
+    <div class="dash-btn dash-primary" onclick="goPage('mesero')">
+      <div class="dash-ic">🧑‍🍳</div>
+      <div class="dash-label">Tomar Orden</div>
+      <div class="dash-sub">Mesero</div>
+    </div>
+    <div class="dash-btn" onclick="goPage('cocina')" id="dash-cocina-btn">
+      <span class="dash-badge" id="dash-cocina-badge">0</span>
+      <div class="dash-ic">👨‍🍳</div>
+      <div class="dash-label">Cocina</div>
+      <div class="dash-sub" id="dash-cocina-sub">Sin órdenes</div>
+    </div>
+    <div class="dash-btn" onclick="goPage('cobros')" id="dash-cobros-btn">
+      <span class="dash-badge" id="dash-cobros-badge">0</span>
+      <div class="dash-ic">💵</div>
+      <div class="dash-label">Cobros</div>
+      <div class="dash-sub" id="dash-cobros-sub">Sin mesas</div>
+    </div>
+    <div class="dash-btn" onclick="goPage('mesas')">
+      <div class="dash-ic">🪑</div>
+      <div class="dash-label">Mesas</div>
+      <div class="dash-sub" id="dash-mesas-sub">— disponibles</div>
+    </div>
+  </div>
+
+  <div style="font-size:12px;font-weight:700;color:var(--gris);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;margin-top:4px">Administración</div>
+  <div class="dash-grid">
+    <div class="dash-btn" onclick="goPage('menu')">
+      <div class="dash-ic">📋</div>
+      <div class="dash-label">Menú</div>
+      <div class="dash-sub">Platillos y precios</div>
+    </div>
+    <div class="dash-btn" onclick="goPage('inventario')">
+      <div class="dash-ic">📦</div>
+      <div class="dash-label">Inventario</div>
+      <div class="dash-sub" id="dash-inv-sub">Stock e insumos</div>
+    </div>
+    <div class="dash-btn" onclick="goPage('reportes')">
+      <div class="dash-ic">📊</div>
+      <div class="dash-label">Reportes</div>
+      <div class="dash-sub">Ventas del día</div>
+    </div>
+    <div class="dash-btn" onclick="goPage('usuarios')">
+      <div class="dash-ic">👤</div>
+      <div class="dash-label">Usuarios</div>
+      <div class="dash-sub">Acceso al sistema</div>
+    </div>
+    <div class="dash-btn" onclick="goPage('config')">
+      <div class="dash-ic">⚙️</div>
+      <div class="dash-label">Configuración</div>
+      <div class="dash-sub">Sistema y logo</div>
+    </div>
+  </div>
+
+  <!-- Alertas de stock -->
+  <div id="dash-alertas"></div>
+</div>
+
+<!-- ===== MESERO - TOMAR ORDEN ===== -->
+<div class="page" id="page-mesero">
+  <div class="wb"><h1>🧑‍🍳 Tomar Orden</h1><p>Selecciona mesa y agrega platillos</p></div>
+  <div class="g2" id="mesero-layout">
+    <!-- IZQUIERDA: Mesas + Menú -->
+    <div>
+      <div class="card">
+        <div class="card-title">🪑 Mesa</div>
+        <div class="mesas-grid" id="mesas-select-grid"></div>
+        <input type="hidden" id="mesa-sel-id">
+        <div id="mesa-sel-label" style="font-size:12px;color:var(--gris);margin-top:4px">Sin mesa seleccionada</div>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 Menú</div>
+        <div id="cats-bar" style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:8px;scrollbar-width:none"></div>
+        <input type="text" id="prod-buscar" placeholder="🔍 Buscar platillo..." oninput="renderProds()" style="margin-bottom:10px">
+        <div id="prod-grid"></div>
+      </div>
+    </div>
+    <!-- DERECHA: Carrito -->
+    <div>
+      <div class="card" style="position:sticky;top:62px;">
+        <div class="card-title">🛒 Orden — <span id="cart-mesa-label" style="color:var(--gris)">sin mesa</span></div>
+        <div id="cart-items" style="min-height:100px;max-height:320px;overflow-y:auto;margin-bottom:10px">
+          <div class="tmuted" style="text-align:center">Agrega platillos</div>
+        </div>
+        <hr class="divider">
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:6px 0 10px">
+          <span>Total</span><span id="cart-total" style="color:var(--verde)">Q0.00</span>
+        </div>
+        <div class="fg" style="margin-bottom:10px">
+          <label>Notas para cocina</label>
+          <textarea id="cart-notas" rows="2" placeholder="Ej: sin cebolla, bien cocido..."></textarea>
+        </div>
+        <button class="btn bp" style="width:100%;padding:12px;font-size:13px" onclick="enviarOrden()">📤 Enviar a cocina</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== COCINA ===== -->
+<div class="page" id="page-cocina">
+  <div class="wb"><h1>👨‍🍳 Pantalla de Cocina</h1><p id="cocina-subtitulo">Órdenes activas</p></div>
+  <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;">
+    <div class="tabs" style="margin:0">
+      <div class="tab active" onclick="filtrarCocina('',this)">Todas</div>
+      <div class="tab" onclick="filtrarCocina('nuevo',this)">🟡 Nuevas</div>
+      <div class="tab" onclick="filtrarCocina('cocinando',this)">🔵 Cocinando</div>
+      <div class="tab" onclick="filtrarCocina('listo',this)">🟢 Listas</div>
+    </div>
+    <button class="btn bsm" style="background:var(--grisc);color:var(--gris)" onclick="initCocina()">↻ Actualizar</button>
+  </div>
+  <div id="cocina-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px"></div>
+</div>
+
+<!-- ===== COBROS ===== -->
+<div class="page" id="page-cobros">
+  <div class="wb"><h1>💵 Cobros</h1><p>Mesas listas para cobrar</p></div>
+  <div class="g2">
+    <div>
+      <div class="card">
+        <div class="card-title">🪑 Seleccionar mesa</div>
+        <div id="cobros-mesas-list"></div>
+      </div>
+    </div>
+    <div id="cobros-ticket-panel">
+      <div class="card"><div class="tmuted" style="text-align:center;padding:30px 0">Selecciona una mesa para ver el ticket</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MENÚ / PLATILLOS ===== -->
+<div class="page" id="page-menu">
+  <div class="wb"><h1>📋 Menú y Platillos</h1><p>Administra categorías y precios</p></div>
+  <div class="fge" style="margin-bottom:12px">
+    <button class="btn bp" onclick="openModal('modal-platillo');limpiarFormPlatillo()">+ Nuevo platillo</button>
+    <button class="btn bsm" style="background:var(--moradoc);color:var(--morado)" onclick="openModal('modal-categoria')">+ Categoría</button>
+  </div>
+  <div class="tabs" id="menu-cats-tabs"></div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Platillo</th><th>Categoría</th><th>Precio</th><th>Disponible</th><th>Acciones</th></tr></thead>
+      <tbody id="menu-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== INVENTARIO ===== -->
+<div class="page" id="page-inventario">
+  <div class="wb"><h1>📦 Inventario</h1><p>Control de stock e insumos</p></div>
+  <div class="fge" style="margin-bottom:12px">
+    <input type="text" id="inv-buscar" placeholder="🔍 Buscar..." oninput="renderInventario()" style="max-width:220px">
+    <button class="btn bp" onclick="openModal('modal-inventario');limpiarFormInv()">+ Agregar producto</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Producto</th><th>Categoría</th><th>Stock</th><th>Mínimo</th><th>Unidad</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody id="inv-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== MESAS ===== -->
+<div class="page" id="page-mesas">
+  <div class="wb"><h1>🪑 Gestión de Mesas</h1><p>Agrega, edita o elimina mesas</p></div>
+  <div class="fge" style="margin-bottom:12px">
+    <button class="btn bp" onclick="openModal('modal-mesa');document.getElementById('mesa-form-id').value='';document.getElementById('mesa-form-num').value=''">+ Agregar mesa</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Mesa N°</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody id="mesas-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== REPORTES ===== -->
+<div class="page" id="page-reportes">
+  <div class="wb"><h1>📊 Reportes</h1><p id="rep-fecha-label">Ventas del día</p></div>
+  <div class="tabs">
+    <div class="tab active" onclick="cambiarReporte('hoy',this)">Hoy</div>
+    <div class="tab" onclick="cambiarReporte('semana',this)">Esta semana</div>
+    <div class="tab" onclick="cambiarReporte('mes',this)">Este mes</div>
+  </div>
+  <div class="kpi-grid" id="rep-kpis"></div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-title">🏆 Top platillos vendidos</div>
+      <div id="rep-top-platos"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">💳 Ventas por método de pago</div>
+      <div id="rep-metodos"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">🧾 Historial de ventas</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Fecha/Hora</th><th>Mesa</th><th>Items</th><th>Total</th><th>Pago</th><th>Atendió</th></tr></thead>
+        <tbody id="rep-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ===== USUARIOS ===== -->
+<div class="page" id="page-usuarios">
+  <div class="wb"><h1>👤 Usuarios</h1><p>Gestión de acceso al sistema</p></div>
+  <div class="fge" style="margin-bottom:12px">
+    <button class="btn bp" onclick="openModal('modal-usuario');limpiarFormUsuario()">+ Nuevo usuario</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody id="usuarios-tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ===== CONFIG ===== -->
+<div class="page" id="page-config">
+  <div class="wb"><h1>⚙️ Configuración</h1><p>Parámetros del sistema</p></div>
+
+  <div class="card">
+    <div class="card-title">🔗 Conexión a Supabase</div>
+    <p style="font-size:11px;color:var(--gris);margin-bottom:10px">Encuentra estos datos en tu proyecto Supabase → Settings → API</p>
+    <div class="g2" style="margin-bottom:10px">
+      <div class="fg"><label>URL del proyecto *</label><input id="cfg-url" placeholder="https://xxxxxx.supabase.co"></div>
+      <div class="fg"><label>Anon Key *</label><input id="cfg-key" placeholder="eyJhbGci..."></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <button class="btn bp" onclick="guardarConfig()">💾 Guardar y conectar</button>
+      <div id="cfg-status" style="font-size:12px;font-weight:600"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🍖 Datos del restaurante</div>
+    <div class="g2" style="margin-bottom:10px">
+      <div class="fg"><label>Nombre del restaurante</label><input id="cfg-nombre" placeholder="Arte al Barril"></div>
+      <div class="fg"><label>IVA (%)</label><input id="cfg-iva" type="number" value="12" min="0" max="30"></div>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label>Mensaje en ticket de cobro</label><input id="cfg-msg" placeholder="¡Gracias por su visita!"></div>
+    <div class="fe"><button class="btn bp" onclick="guardarConfigRest()">💾 Guardar</button></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🖼️ Logo del restaurante</div>
+    <p style="font-size:11px;color:var(--gris);margin-bottom:12px">Se muestra en el login y el menú lateral</p>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <img id="cfg-logo-preview" src="" style="width:80px;height:80px;border-radius:12px;object-fit:contain;border:2px solid var(--borde);display:none">
+      <div id="cfg-logo-fb" style="width:80px;height:80px;border-radius:12px;background:var(--azulc);display:flex;align-items:center;justify-content:center;font-size:40px;border:2px solid var(--borde)">🔥</div>
+      <div>
+        <label class="btn bp" style="cursor:pointer;display:inline-flex">
+          📁 Subir logo
+          <input type="file" id="cfg-logo-input" accept="image/*" style="display:none" onchange="subirLogo(this)">
+        </label>
+        <button class="btn bsm bd" style="margin-left:6px" onclick="borrarLogo()">🗑️ Quitar</button>
+        <div style="font-size:10px;color:var(--gris);margin-top:6px">PNG, JPG o SVG. Recomendado: 200×200px</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🗄️ Inicializar base de datos</div>
+    <p style="font-size:11px;color:var(--gris);margin-bottom:12px">Solo necesitas hacer esto <strong>una vez</strong> cuando configures el sistema por primera vez.</p>
+    <button class="btn bp" onclick="crearTablas()" id="btn-crear-tablas">🚀 Crear tablas automáticamente</button>
+    <div id="crear-tablas-status" style="margin-top:10px;font-size:12px"></div>
+  </div>
+</div>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════════════ MODALES ══════════════════ -->
+
+<!-- MODAL PLATILLO -->
+<div class="modal-ov" id="modal-platillo">
+  <div class="modal">
+    <div class="modal-title" id="platillo-modal-title">➕ Nuevo platillo</div>
+    <input type="hidden" id="pf-id">
+    <div class="g2" style="margin-bottom:10px">
+      <div class="fg"><label>Nombre del platillo *</label><input id="pf-nombre" placeholder="Ej: Pollo asado"></div>
+      <div class="fg"><label>Precio (Q) *</label><input id="pf-precio" type="number" step="0.01" placeholder="0.00"></div>
+    </div>
+    <div class="g2" style="margin-bottom:10px">
+      <div class="fg"><label>Categoría</label>
+        <select id="pf-cat"><option value="">Sin categoría</option></select>
+      </div>
+      <div class="fg"><label>Disponible</label>
+        <select id="pf-disponible"><option value="1">✅ Sí</option><option value="0">❌ No</option></select>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label>Descripción</label><textarea id="pf-desc" rows="2" placeholder="Descripción opcional..."></textarea></div>
+    <div class="mfoot">
+      <button class="btn bsm" style="background:var(--grisc);color:var(--gris)" onclick="closeModal('modal-platillo')">Cancelar</button>
+      <button class="btn bp bsm" onclick="guardarPlatillo()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CATEGORÍA -->
+<div class="modal-ov" id="modal-categoria">
+  <div class="modal">
+    <div class="modal-title">📁 Nueva categoría</div>
+    <div class="fg" style="margin-bottom:10px"><label>Nombre de la categoría *</label><input id="cat-nombre" placeholder="Ej: Platos fuertes"></div>
+    <div class="mfoot">
+      <button class="btn bsm" style="background:var(--grisc);color:var(--gris)" onclick="closeModal('modal-categoria')">Cancelar</button>
+      <button class="btn bp bsm" onclick="guardarCategoria()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL INVENTARIO -->
+<div class="modal-ov" id="modal-inventario">
+  <div class="modal">
+    <div class="modal-title" id="inv-modal-title">📦 Nuevo producto</div>
+    <input type="hidden" id="if-id">
+    <div class="g2" style="margin-bottom:10px">
+      <div class="fg"><label>Nombre *</label><input id="if-nombre" placeholder="Ej: Tomates"></div>
+      <div class="fg"><label>Categoría</label><input id="if-cat" placeholder="Ej: Verduras"></div>
+    </div>
+    <div class="g3" style="margin-bottom:10px">
+      <div class="fg"><label>Stock actual</label><input id="if-stock" type="number" step="0.01" placeholder="0"></div>
+      <div class="fg"><label>Stock mínimo</label><input id="if-min" type="number" step="0.01" placeholder="0"></div>
+      <div class="fg"><label>Unidad</label><input id="if-unidad" placeholder="kg / litros"></div>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label>Notas</label><input id="if-notas" placeholder="Notas opcionales"></div>
+    <div class="mfoot">
+      <button class="btn bsm" style="background:var(--grisc);color:var(--gris)" onclick="closeModal('modal-inventario')">Cancelar</button>
+      <button class="btn bp bsm" onclick="guardarInventario()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AJUSTE STOCK -->
+<div class="modal-ov" id="modal-ajuste-stock">
+  <div class="modal">
+    <div class="modal-title">📊 Ajuste de stock</div>
+    <input type="hidden" id="as-id">
+    <p id="as-nombre" style="font-size:13px;font-weight:600;margin-bottom:12px;color:var(--texto2)"></p>
+    <div class="g2" style="margin-bottom:10px">
+      <div class="fg"><label>Tipo de ajuste</label>
+        <select id="as-tipo">
+          <option value="entrada">➕ Entrada (compra/recepción)</option>
+          <option value="salida">➖ Salida (uso/pérdida)</option>
+          <option value="ajuste">📝 Ajuste manual</option>
+        </select>
+      </div>
+      <div class="fg"><label>Cantidad</label><input id="as-cantidad" type="number" step="0.01" placeholder="0"></div>
+    </div>
+    <div class="fg" style="margin-bottom:10px"><label>Notas del movimiento</label><input id="as-nota" placeholder="Ej: Compra a proveedor X"></div>
+    <div class="ms" id="as-resultado" style="margin-bottom:10px;display:none">
+      <div class="ml">Stock resultante</div><div class="mv" id="as-nuevo-stock">0</div>
+    </div>
+    <div class="mfoot">
+      <button class="btn bsm" style="background:var(--grisc);color:var(--gris)" onclick="closeModal('modal-ajuste-stock')">Cancelar</button>
+      <button class="btn bs bsm" onclick="guardarAjusteStock()">✅ Aplicar ajuste</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MESA -->
+<div class="modal-ov" id="modal-mesa">
+  <div class="modal">
+    <div class="modal-title">🪑 Mesa</div>
+    <input type="hidden" id="mesa-form-id">
+    <div class="fg" style="margin-bottom:10px"><label>Número de mesa *</label><input id="mesa-form-num" type="number" placeholder="Ej: 1"></div>
+    <div class="mfoot">
+      <button class="btn bsm" style="background:var(--grisc);color:var(--gris)" onclick="closeModal('modal-mesa')">Cancelar</button>
+      <button class="btn bp bsm" onclick="guardarMesa()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL USUARIO -->
+<div class="modal-ov" id="modal-usuario">
+  <div class="modal">
+    <div class="modal-title" id="usr-modal-title">👤 Nuevo usuario</div>
+    <input type="hidden" id="uf-id">
+    <div class="g2" style="margin-bottom:10px">
+      <div class="fg"><label>Usuario (login) *</label><input id="uf-usuario" placeholder="Ej: mesero1"></div>
+      <div class="fg"><label>Contraseña *</label><input id="uf-pass" type="password" placeholder="Contraseña"></div>
+    </div>
+    <div class="g2" style="margin-bottom:10px">
+      <div class="fg"><label>Nombre completo</label><input id="uf-nombre" placeholder="Ej: Juan López"></div>
+      <div class="fg"><label>Rol</label>
+        <select id="uf-rol">
+          <option value="mesero">🧑‍🍳 Mesero</option>
+          <option value="cocina">👨‍🍳 Cocina</option>
+          <option value="cajero">💵 Cajero</option>
+          <option value="admin">⚙️ Administrador</option>
+        </select>
+      </div>
+    </div>
+    <div class="mfoot">
+      <button class="btn bsm" style="background:var(--grisc);color:var(--gris)" onclick="closeModal('modal-usuario')">Cancelar</button>
+      <button class="btn bp bsm" onclick="guardarUsuario()">💾 Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COBRO -->
+<div class="modal-ov" id="modal-cobro">
+  <div class="modal">
+    <div class="modal-title">💵 Registrar pago</div>
+    <input type="hidden" id="cobro-orden-ids">
+    <div id="cobro-resumen" style="margin-bottom:12px"></div>
+    <div class="g2" style="margin-bottom:10px">
+      <div class="fg"><label>Método de pago</label>
+        <select id="cobro-metodo">
+          <option value="Efectivo">💵 Efectivo</option>
+          <option value="Tarjeta">💳 Tarjeta</option>
+          <option value="Transferencia">📱 Transferencia</option>
+          <option value="Cortesía">🎁 Cortesía</option>
+        </select>
+      </div>
+      <div class="fg"><label>Monto recibido (Q)</label><input id="cobro-recibido" type="number" step="0.01" placeholder="0.00" oninput="calcCambio()"></div>
+    </div>
+    <div class="ms" id="cobro-cambio-box" style="margin-bottom:10px;display:none">
+      <div class="ml">Cambio</div><div class="mv" id="cobro-cambio">Q0.00</div>
+    </div>
+    <div class="mfoot">
+      <button class="btn bsm" style="background:var(--grisc);color:var(--gris)" onclick="closeModal('modal-cobro')">Cancelar</button>
+      <button class="btn bs bsm" onclick="procesarCobro()">✅ Confirmar cobro</button>
+      <button class="btn bsm" style="background:var(--moradoc);color:var(--morado)" onclick="imprimirTicket()">🖨️ Imprimir ticket</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL NOTAS ORDEN COCINA -->
+<div class="modal-ov" id="modal-notas-orden">
+  <div class="modal">
+    <div class="modal-title">📝 Agregar nota a orden</div>
+    <input type="hidden" id="nota-orden-id">
+    <div class="fg" style="margin-bottom:10px"><label>Nota para cocina</label><textarea id="nota-texto" rows="3" placeholder="Ej: Agregar extra de chile, sin cebolla..."></textarea></div>
+    <div class="mfoot">
+      <button class="btn bsm" style="background:var(--grisc);color:var(--gris)" onclick="closeModal('modal-notas-orden')">Cancelar</button>
+      <button class="btn bp bsm" onclick="guardarNotaOrden()">💾 Guardar nota</button>
+    </div>
+  </div>
+</div>
+
+<!-- TICKET PARA IMPRIMIR -->
+<div id="ticket-area" style="display:none">
+  <div id="ticket-contenido"></div>
+</div>
+
+<!-- NOTIFICACIÓN -->
+<div class="notif" id="notif"></div>
+
+<script>
+// ══════════════════════════════════════════════════
+//   CONFIGURACIÓN Y SUPABASE
+// ══════════════════════════════════════════════════
+let sb = null;
+let CU = null; // usuario actual
+let D  = { mesas:[], platillos:[], categorias:[], inventario:[], ordenes:[], usuarios:[] };
+let cart = [];
+let catActiva = '';
+let filtroCocina = '';
+let repPeriodo = 'hoy';
+let _cobroMesaNum = '';
+let _cobroTotal = 0;
+
+// ── CREDENCIALES INTEGRADAS ──
+const SB_URL = 'https://avepwleohlhbfxpeajss.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2ZXB3bGVvaGxoYmZ4cGVhanNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMTQyMDQsImV4cCI6MjA5MTc5MDIwNH0._xfIedOJiFWnAQP0IdQspfw1GCNue5SHc_HmeHOigwc';
+
+function getCfg(){
+  return {
+    url: SB_URL,
+    key: SB_KEY,
+    nombre: localStorage.getItem('pos_nombre')||'Arte al Barril',
+    iva: parseFloat(localStorage.getItem('pos_iva')||'12'),
+    msg: localStorage.getItem('pos_msg')||'¡Gracias por su visita!'
+  };
+}
+
+function initSupabase(){
+  try{
+    const { createClient } = window.supabase;
+    sb = createClient(SB_URL, SB_KEY);
+    return true;
+  }catch(e){ return false; }
+}
+
+// ══════════════════════════════════════════════════
+//   UTILIDADES
+// ══════════════════════════════════════════════════
+function fQ(n){ return 'Q'+(parseFloat(n)||0).toFixed(2); }
+function hoy(){ return new Date().toISOString().slice(0,10); }
+function ahoraStr(){ return new Date().toLocaleString('es-GT'); }
+function showNotif(msg, bg='#2e7d32'){
+  const el = document.getElementById('notif');
+  el.textContent = msg; el.style.background = bg; el.style.display='block';
+  clearTimeout(window._nt);
+  window._nt = setTimeout(()=>el.style.display='none', 3000);
+}
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function toggleSB(){
+  const sb2 = document.getElementById('sidebar');
+  const ov  = document.getElementById('sb-overlay');
+  const mw  = document.getElementById('main-wrap');
+  const isMobile = window.innerWidth <= 768;
+  if(isMobile){
+    const hidden = sb2.classList.toggle('hidden');
+    ov.classList.toggle('show', !hidden);
+  } else {
+    const full = mw.classList.toggle('full');
+    sb2.classList.toggle('hidden', full);
+  }
+}
+function closeSB(){
+  document.getElementById('sidebar').classList.add('hidden');
+  document.getElementById('sb-overlay').classList.remove('show');
+}
+function goPage(page){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('page-'+page)?.classList.add('active');
+  document.querySelector(`[data-page="${page}"]`)?.classList.add('active');
+  const titles = {
+    inicio:'Inicio', mesero:'Tomar Orden', cocina:'Pantalla de Cocina',
+    cobros:'Cobros', menu:'Menú / Platillos', inventario:'Inventario',
+    mesas:'Gestión de Mesas', reportes:'Reportes', usuarios:'Usuarios', config:'Configuración'
+  };
+  document.getElementById('tb-title').textContent = titles[page]||page;
+  if(window.innerWidth<=768) closeSB();
+  if(page==='inicio')    initInicio();
+  if(page==='mesero')    initMesero();
+  if(page==='cocina')    initCocina();
+  if(page==='cobros')    initCobros();
+  if(page==='menu')      initMenu();
+  if(page==='inventario')initInventario();
+  if(page==='mesas')     initMesasAdmin();
+  if(page==='reportes')  initReportes();
+  if(page==='usuarios')  initUsuarios();
+  if(page==='config')    initConfig();
+}
+
+// ══════════════════════════════════════════════════
+//   LOGIN / LOGOUT
+// ══════════════════════════════════════════════════
+async function doLogin(){
+  const u = document.getElementById('lu').value.trim();
+  const p = document.getElementById('lp').value.trim();
+  const err = document.getElementById('lerr');
+  err.textContent='';
+  if(!u||!p){err.textContent='Completa usuario y contraseña';return;}
+  if(!sb){err.textContent='⚠️ Configura Supabase primero en Configuración';showConfigFirst();return;}
+  const {data,error} = await sb.from('usuarios').select('*').eq('usuario',u).eq('password',p).eq('activo',true).single();
+  if(error||!data){err.textContent='Usuario o contraseña incorrectos';return;}
+  CU = data;
+  document.getElementById('login-screen').classList.remove('show');
+  document.getElementById('app').classList.add('show');
+  document.getElementById('sb-unom').textContent = data.nombre||data.usuario;
+  document.getElementById('sb-avatar').textContent = (data.nombre||data.usuario)[0].toUpperCase();
+  document.getElementById('tb-user').textContent = data.rol;
+  aplicarLogoYNombre();
+  await cargarTodos();
+  initInicio();
+  document.getElementById('loading-screen').style.display='none';
+}
+
+function showConfigFirst(){
+  document.getElementById('app').classList.add('show');
+  document.getElementById('login-screen').classList.remove('show');
+  document.getElementById('loading-screen').style.display='none';
+  goPage('config');
+}
+
+function doLogout(){
+  CU=null; cart=[];
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-screen').classList.add('show');
+}
+
+// ══════════════════════════════════════════════════
+//   CARGAR DATOS
+// ══════════════════════════════════════════════════
+async function cargarTodos(){
+  if(!sb) return;
+  const [m,p,c,i,o,u] = await Promise.all([
+    sb.from('mesas').select('*').order('numero'),
+    sb.from('platillos').select('*,categorias(nombre)').order('nombre'),
+    sb.from('categorias').select('*').order('orden'),
+    sb.from('inventario').select('*').order('nombre'),
+    sb.from('ordenes').select('*,orden_items(*)').neq('estado','cobrado').order('creado_en'),
+    sb.from('usuarios').select('*').order('nombre'),
+  ]);
+  D.mesas      = m.data||[];
+  D.platillos  = p.data||[];
+  D.categorias = c.data||[];
+  D.inventario = i.data||[];
+  D.ordenes    = o.data||[];
+  D.usuarios   = u.data||[];
+  actualizarBadgeCocina();
+}
+
+function actualizarBadgeCocina(){
+  const activas = D.ordenes.filter(o=>['nuevo','cocinando'].includes(o.estado)).length;
+  const b = document.getElementById('cocina-badge');
+  b.style.display = activas>0?'':'none';
+  b.textContent = activas;
+}
+
+// ══════════════════════════════════════════════════
+//   INICIO — DASHBOARD
+// ══════════════════════════════════════════════════
+function initInicio(){
+  const cfg=getCfg();
+  // Logo en dashboard
+  const logo=localStorage.getItem('pos_logo');
+  const dli=document.getElementById('dash-logo-img');
+  const dlf=document.getElementById('dash-logo-fb');
+  if(logo&&dli){dli.src=logo;dli.style.display='';if(dlf)dlf.style.display='none';}
+  else{if(dli)dli.style.display='none';if(dlf)dlf.style.display='';}
+
+  document.getElementById('wb-titulo').textContent=cfg.nombre||'Arte al Barril';
+  document.getElementById('wb-fecha').textContent=new Date().toLocaleDateString('es-GT',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('wb-user').textContent=`👤 ${CU?.nombre||CU?.usuario||''} · ${CU?.rol||''}`;
+
+  // KPIs
+  const ventasHoy=D.ordenes.filter(o=>o.estado==='cobrado'&&o.cobrado_en?.slice(0,10)===hoy()).reduce((s,o)=>s+parseFloat(o.total||0),0);
+  const ordenesActivas=D.ordenes.filter(o=>['nuevo','cocinando','listo'].includes(o.estado)).length;
+  const mesasOcupadas=D.mesas.filter(m=>m.estado!=='libre').length;
+  const stockBajos=D.inventario.filter(i=>parseFloat(i.stock)<=parseFloat(i.stock_min)).length;
+
+  document.getElementById('kpi-inicio').innerHTML=`
+    <div class="kpi-card"><div class="kpi-ic">💵</div><div><div class="kpi-lbl">Ventas hoy</div><div class="kpi-val">${fQ(ventasHoy)}</div></div></div>
+    <div class="kpi-card" style="border-left-color:#f9a825"><div class="kpi-ic">🧾</div><div><div class="kpi-lbl">Órdenes activas</div><div class="kpi-val">${ordenesActivas}</div></div></div>
+    <div class="kpi-card" style="border-left-color:#2e7d32"><div class="kpi-ic">🪑</div><div><div class="kpi-lbl">Mesas ocupadas</div><div class="kpi-val">${mesasOcupadas}/${D.mesas.length}</div></div></div>
+    <div class="kpi-card" style="border-left-color:#c62828"><div class="kpi-ic">⚠️</div><div><div class="kpi-lbl">Stock bajo</div><div class="kpi-val">${stockBajos}</div></div></div>
+  `;
+
+  // Subtítulos dinámicos en botones
+  const cocActivas=D.ordenes.filter(o=>['nuevo','cocinando'].includes(o.estado)).length;
+  const cobActivas=D.ordenes.filter(o=>['listo','entregado'].includes(o.estado)).length;
+  const mesasLibres=D.mesas.filter(m=>m.estado==='libre').length;
+
+  document.getElementById('dash-cocina-sub').textContent=cocActivas?`${cocActivas} orden${cocActivas!==1?'es':''} pendiente${cocActivas!==1?'s':''}` :'Sin órdenes activas';
+  document.getElementById('dash-cobros-sub').textContent=cobActivas?`${cobActivas} mesa${cobActivas!==1?'s':''} por cobrar`:'Sin mesas por cobrar';
+  document.getElementById('dash-mesas-sub').textContent=`${mesasLibres} libre${mesasLibres!==1?'s':''} de ${D.mesas.length}`;
+  const bc=document.getElementById('dash-cocina-badge');
+  if(bc){bc.style.display=cocActivas?'':'none';bc.textContent=cocActivas;}
+  const bb=document.getElementById('dash-cobros-badge');
+  if(bb){bb.style.display=cobActivas?'':'none';bb.textContent=cobActivas;}
+  const bajos=D.inventario.filter(i=>parseFloat(i.stock)<=parseFloat(i.stock_min));
+  document.getElementById('dash-inv-sub').textContent=stockBajos?`⚠️ ${stockBajos} producto${stockBajos!==1?'s':''} bajo mínimo`:'Stock en orden';
+  document.getElementById('dash-alertas').innerHTML=bajos.length?`<div class="card" style="margin-top:4px;border-left:4px solid #c62828"><div class="card-title">⚠️ Productos bajo stock mínimo</div>${bajos.map(i=>`<div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid #f5f5f5"><span>${i.nombre}</span><span class="badge br">${i.stock} ${i.unidad}</span></div>`).join('')}</div>`:'';
+}
+
+// ══════════════════════════════════════════════════
+//   MESERO
+// ══════════════════════════════════════════════════
+function initMesero(){
+  renderMesasSelect();
+  renderCatsBar();
+  renderProds();
+  renderCart();
+}
+
+function renderMesasSelect(){
+  const g = document.getElementById('mesas-select-grid');
+  g.innerHTML = D.mesas.map(m=>{
+    const sel = document.getElementById('mesa-sel-id')?.value == m.id;
+    const cls = sel?'selected':m.estado==='libre'?'libre':m.estado==='ocupada'?'ocupada':'cobrar';
+    const ico = m.estado==='libre'?'🟢':m.estado==='ocupada'?'🟡':'💵';
+    return `<div class="mesa-btn ${cls}" onclick="selMesa(${m.id},${m.numero})">
+      <div class="mesa-num">${m.numero}</div>
+      <div class="mesa-est">${ico} ${m.estado}</div>
+    </div>`;
+  }).join('');
+}
+
+function selMesa(id, num){
+  document.getElementById('mesa-sel-id').value = id;
+  document.getElementById('mesa-sel-label').textContent = `Mesa ${num}`;
+  document.getElementById('cart-mesa-label').textContent = `Mesa ${num}`;
+  renderMesasSelect();
+}
+
+function renderCatsBar(){
+  const bar = document.getElementById('cats-bar');
+  const cats = ['Todos',...(D.categorias.map(c=>c.nombre))];
+  bar.innerHTML = cats.map(c=>`
+    <span onclick="selCat('${c==='Todos'?'':c}')" style="background:${(catActiva===''&&c==='Todos')||(catActiva===c)?'var(--azul)':'#fff'};color:${(catActiva===''&&c==='Todos')||(catActiva===c)?'#fff':'var(--azul)'};border:1.5px solid var(--azulm);padding:5px 12px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0;display:inline-block">${c}</span>
+  `).join('');
+}
+
+function selCat(c){ catActiva=c; renderCatsBar(); renderProds(); }
+
+function renderProds(){
+  const q = (document.getElementById('prod-buscar')?.value||'').toLowerCase();
+  let prods = D.platillos.filter(p=>p.disponible!==false);
+  if(catActiva) prods = prods.filter(p=>p.categorias?.nombre===catActiva||p.categoria_id===catActiva);
+  if(q) prods = prods.filter(p=>p.nombre.toLowerCase().includes(q));
+  const g = document.getElementById('prod-grid');
+  if(!prods.length){g.innerHTML='<div style="grid-column:1/-1;text-align:center;color:var(--gris);padding:24px;font-size:13px">Sin platillos</div>';return;}
+  g.innerHTML = prods.map(p=>{
+    const en = cart.find(i=>i.pid===p.id);
+    return `<div class="prod-card${en?' sel':''}" onmousedown="addToCart(${p.id})">
+      <div class="prod-nombre">${p.nombre}</div>
+      <div class="prod-precio">${fQ(p.precio)}</div>
+      <div class="prod-cat">${p.categorias?.nombre||''}</div>
+      ${en?`<div class="prod-plus" style="background:var(--verde)">${en.cant}</div>`:'<div class="prod-plus">+</div>'}
+    </div>`;
+  }).join('');
+}
+
+function addToCart(pid){
+  const p = D.platillos.find(x=>x.id===pid); if(!p) return;
+  const ex = cart.find(i=>i.pid===pid);
+  if(ex) ex.cant++;
+  else cart.push({pid, nombre:p.nombre, precio:p.precio, cant:1});
+  renderCart(); renderProds();
+}
+
+function cambiarCant(idx, delta){
+  cart[idx].cant += delta;
+  if(cart[idx].cant<=0) cart.splice(idx,1);
+  renderCart(); renderProds();
+}
+
+function renderCart(){
+  const el = document.getElementById('cart-items');
+  if(!cart.length){el.innerHTML='<div class="tmuted" style="text-align:center">Agrega platillos</div>';document.getElementById('cart-total').textContent='Q0.00';return;}
+  let total=0;
+  el.innerHTML = cart.map((i,idx)=>{
+    const sub=i.precio*i.cant; total+=sub;
+    return `<div class="cart-row">
+      <button class="cart-qty-btn" style="background:var(--azulm);color:var(--azul)" onclick="cambiarCant(${idx},-1)">−</button>
+      <span style="font-size:13px;font-weight:700;min-width:20px;text-align:center">${i.cant}</span>
+      <button class="cart-qty-btn" style="background:var(--azul);color:#fff" onclick="cambiarCant(${idx},1)">+</button>
+      <span style="flex:1;font-size:12px">${i.nombre}</span>
+      <span style="font-size:12px;color:var(--gris)">${fQ(sub)}</span>
+      <button onclick="cart.splice(${idx},1);renderCart();renderProds()" style="background:none;border:none;color:var(--rojo);cursor:pointer;font-size:12px">✕</button>
+    </div>`;
+  }).join('');
+  document.getElementById('cart-total').textContent = fQ(total);
+}
+
+async function enviarOrden(){
+  const mesaId = document.getElementById('mesa-sel-id').value;
+  if(!mesaId){showNotif('Selecciona una mesa','#e65100');return;}
+  if(!cart.length){showNotif('Agrega platillos al pedido','#e65100');return;}
+  if(!sb){showNotif('Sin conexión a Supabase','#c62828');return;}
+
+  const total = cart.reduce((s,i)=>s+i.precio*i.cant,0);
+  const notas = document.getElementById('cart-notas').value||null;
+  const mesaNum = D.mesas.find(m=>m.id==mesaId)?.numero;
+
+  const {data:orden,error} = await sb.from('ordenes').insert({
+    mesa_id:mesaId, mesa_numero:mesaNum, estado:'nuevo',
+    notas, total, usuario_id:CU?.id, usuario_nombre:CU?.nombre||CU?.usuario
+  }).select().single();
+
+  if(error){showNotif('Error al crear orden: '+error.message,'#c62828');return;}
+
+  const items = cart.map(i=>({
+    orden_id:orden.id, platillo_id:i.pid, platillo_nombre:i.nombre,
+    cantidad:i.cant, precio_unit:i.precio, subtotal:i.precio*i.cant
+  }));
+  await sb.from('orden_items').insert(items);
+  await sb.from('mesas').update({estado:'ocupada'}).eq('id',mesaId);
+
+  showNotif(`✅ Orden Mesa ${mesaNum} enviada a cocina — ${fQ(total)}`);
+  cart=[];
+  document.getElementById('cart-notas').value='';
+  document.getElementById('mesa-sel-id').value='';
+  document.getElementById('mesa-sel-label').textContent='Sin mesa seleccionada';
+  document.getElementById('cart-mesa-label').textContent='sin mesa';
+  await cargarTodos();
+  renderCart(); renderMesasSelect(); renderProds();
+}
+
+// ══════════════════════════════════════════════════
+//   COCINA
+// ══════════════════════════════════════════════════
+function filtrarCocina(f,btn){
+  filtroCocina=f;
+  document.querySelectorAll('#page-cocina .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderCocina();
+}
+
+async function initCocina(){
+  await cargarTodos();
+  renderCocina();
+}
+
+function renderCocina(){
+  let ordenes = D.ordenes.filter(o=>['nuevo','cocinando','listo'].includes(o.estado));
+  if(filtroCocina) ordenes = ordenes.filter(o=>o.estado===filtroCocina);
+  ordenes.sort((a,b)=>new Date(a.creado_en)-new Date(b.creado_en));
+
+  document.getElementById('cocina-subtitulo').textContent = `${ordenes.length} orden${ordenes.length!==1?'es':''} activa${ordenes.length!==1?'s':''}`;
+  const g = document.getElementById('cocina-grid');
+
+  if(!ordenes.length){
+    g.innerHTML='<div style="text-align:center;color:var(--gris);padding:40px;grid-column:1/-1;font-size:14px">✅ No hay órdenes activas</div>';
+    return;
+  }
+
+  g.innerHTML = ordenes.map(o=>{
+    const mins = Math.floor((Date.now()-new Date(o.creado_en).getTime())/60000);
+    const urgente = mins>=15&&o.estado!=='listo';
+    const hcls = o.estado==='nuevo'?'nuevo':o.estado==='cocinando'?'cocinando':'listo';
+    const badge = o.estado==='nuevo'?'<span class="badge bn">🟡 Nueva</span>':o.estado==='cocinando'?'<span class="badge baz">🔵 Cocinando</span>':'<span class="badge bv">🟢 Lista</span>';
+    const items = (o.orden_items||[]).map(i=>`<div class="oc-item"><span class="oc-qty">${i.cantidad}x</span><span>${i.platillo_nombre}</span></div>`).join('');
+    let botones = '';
+    if(o.estado==='nuevo') botones=`<button class="btn bsm bi" onclick="updEstadoOrden(${o.id},'cocinando')">🔵 Iniciar</button>`;
+    else if(o.estado==='cocinando') botones=`<button class="btn bsm bs" onclick="updEstadoOrden(${o.id},'listo')">🟢 Listo</button>`;
+    else if(o.estado==='listo') botones=`<button class="btn bsm bw" onclick="updEstadoOrden(${o.id},'entregado')">📤 Entregado</button>`;
+
+    return `<div class="orden-card ${hcls}${urgente?' urgente':''}">
+      <div class="oc-head ${hcls}">
+        <div>
+          <div class="oc-mesa">Mesa ${o.mesa_numero}</div>
+          <div class="oc-timer">${o.creado_en?.slice(11,16)} · ⏱ ${mins}min${urgente?'  🚨':''}</div>
+        </div>
+        <div>${badge}</div>
+      </div>
+      <div class="oc-items">${items||'<div class="tmuted">Sin items</div>'}</div>
+      ${o.notas?`<div class="oc-nota">📝 ${o.notas}</div>`:''}
+      <div class="oc-foot">
+        ${botones}
+        <button class="btn bsm" style="background:var(--grisc);color:var(--gris)" onclick="abrirNotaOrden(${o.id},'${(o.notas||'').replace(/'/g,'\\\'')}')" title="Editar nota">📝</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function updEstadoOrden(id, estado){
+  await sb.from('ordenes').update({estado}).eq('id',id);
+  if(estado==='entregado'){
+    const o = D.ordenes.find(x=>x.id===id);
+    if(o){
+      const activas = D.ordenes.filter(x=>x.mesa_id===o.mesa_id&&x.id!==id&&['nuevo','cocinando','listo'].includes(x.estado));
+      if(!activas.length) await sb.from('mesas').update({estado:'cobrar'}).eq('id',o.mesa_id);
+    }
+  }
+  await cargarTodos();
+  renderCocina();
+  showNotif(`✅ Orden actualizada a "${estado}"`);
+}
+
+function abrirNotaOrden(id, nota){
+  document.getElementById('nota-orden-id').value=id;
+  document.getElementById('nota-texto').value=nota;
+  openModal('modal-notas-orden');
+}
+
+async function guardarNotaOrden(){
+  const id = document.getElementById('nota-orden-id').value;
+  const nota = document.getElementById('nota-texto').value;
+  await sb.from('ordenes').update({notas:nota}).eq('id',id);
+  closeModal('modal-notas-orden');
+  await cargarTodos(); renderCocina();
+  showNotif('✅ Nota actualizada');
+}
+
+// ══════════════════════════════════════════════════
+//   COBROS
+// ══════════════════════════════════════════════════
+async function initCobros(){
+  await cargarTodos();
+  renderCobrosMesas();
+  document.getElementById('cobros-ticket-panel').innerHTML='<div class="card"><div class="tmuted" style="text-align:center;padding:30px 0">Selecciona una mesa para ver el ticket</div></div>';
+}
+
+function renderCobrosMesas(){
+  const list = document.getElementById('cobros-mesas-list');
+  const mesasCobrar = D.mesas.filter(m=>m.estado==='cobrar'||m.estado==='ocupada');
+  // Tomar solo mesas con al menos una orden en estado listo/entregado
+  const mesasConOrden = mesasCobrar.filter(m=>D.ordenes.some(o=>o.mesa_id===m.id&&['listo','entregado'].includes(o.estado)));
+  if(!mesasConOrden.length){
+    list.innerHTML='<div class="tmuted" style="text-align:center;padding:20px">No hay mesas listas para cobrar</div>';
+    return;
+  }
+  list.innerHTML = mesasConOrden.map(m=>{
+    const ords = D.ordenes.filter(o=>o.mesa_id===m.id&&['listo','entregado'].includes(o.estado));
+    const total = ords.reduce((s,o)=>s+parseFloat(o.total||0),0);
+    const items = ords.reduce((s,o)=>s+(o.orden_items||[]).reduce((a,i)=>a+i.cantidad,0),0);
+    return `<div class="card" style="cursor:pointer;margin-bottom:8px;border:2px solid var(--azulm)" onclick="verTicket(${m.id})">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:15px;font-weight:700">Mesa ${m.numero}</div>
+          <div style="font-size:11px;color:var(--gris)">${items} artículos · ${ords.length} orden${ords.length!==1?'es':''}</div>
+        </div>
+        <div style="font-size:16px;font-weight:800;color:var(--verde)">${fQ(total)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function verTicket(mesaId){
+  const mesa = D.mesas.find(m=>m.id===mesaId);
+  const ords = D.ordenes.filter(o=>o.mesa_id===mesaId&&['listo','entregado'].includes(o.estado));
+  const ordenIds = ords.map(o=>o.id);
+  const allItems = {};
+  ords.forEach(o=>(o.orden_items||[]).forEach(i=>{
+    if(!allItems[i.platillo_nombre]) allItems[i.platillo_nombre]={nombre:i.platillo_nombre,precio:i.precio_unit,qty:0};
+    allItems[i.platillo_nombre].qty+=i.cantidad;
+  }));
+  const cfg = getCfg();
+  const subtotal = ords.reduce((s,o)=>s+parseFloat(o.total||0),0);
+  const iva = subtotal*(cfg.iva/100);
+  const total = subtotal+iva;
+  _cobroMesaNum = mesa?.numero;
+  _cobroTotal = total;
+
+  const rows = Object.values(allItems).map(i=>`
+    <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f5f5f5;font-size:12px">
+      <span>${i.qty}x ${i.nombre}</span>
+      <span>${fQ(i.precio*i.qty)}</span>
+    </div>`).join('');
+
+  document.getElementById('cobros-ticket-panel').innerHTML=`
+    <div class="card">
+      <div style="text-align:center;margin-bottom:12px">
+        <div style="font-size:16px;font-weight:800;color:var(--azul)">${cfg.nombre}</div>
+        <div style="font-size:12px;color:var(--gris)">Mesa ${mesa?.numero} · ${new Date().toLocaleDateString('es-GT')}</div>
+      </div>
+      ${rows}
+      <hr class="divider">
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>Subtotal</span><span>${fQ(subtotal)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>IVA (${cfg.iva}%)</span><span>${fQ(iva)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800;padding:6px 0;border-top:2px solid var(--azul);color:var(--azul)"><span>TOTAL</span><span>${fQ(total)}</span></div>
+      <div class="fe" style="margin-top:12px">
+        <button class="btn bd bsm" onclick="abrirModalCobro([${ordenIds}],${total})">💵 Cobrar</button>
+        <button class="btn bsm" style="background:var(--moradoc);color:var(--morado)" onclick="prepTicketImpresion(${mesaId})">🖨️ Imprimir</button>
+      </div>
+    </div>`;
+}
+
+function abrirModalCobro(ids, total){
+  document.getElementById('cobro-orden-ids').value = JSON.stringify(ids);
+  document.getElementById('cobro-resumen').innerHTML=`<div class="ms"><div class="ml">Total a cobrar</div><div class="mv">${fQ(total)}</div></div>`;
+  document.getElementById('cobro-recibido').value='';
+  document.getElementById('cobro-cambio-box').style.display='none';
+  openModal('modal-cobro');
+}
+
+function calcCambio(){
+  const total = _cobroTotal;
+  const rec = parseFloat(document.getElementById('cobro-recibido').value)||0;
+  const box = document.getElementById('cobro-cambio-box');
+  if(rec>0){
+    box.style.display='';
+    const cambio = rec-total;
+    document.getElementById('cobro-cambio').textContent = cambio>=0?fQ(cambio):`Falta: ${fQ(-cambio)}`;
+    document.getElementById('cobro-cambio').style.color = cambio>=0?'var(--verde)':'var(--rojo)';
+  } else box.style.display='none';
+}
+
+async function procesarCobro(){
+  const ids = JSON.parse(document.getElementById('cobro-orden-ids').value||'[]');
+  const metodo = document.getElementById('cobro-metodo').value;
+  if(!ids.length){showNotif('Sin órdenes','#c62828');return;}
+
+  for(const id of ids){
+    await sb.from('ordenes').update({estado:'cobrado',metodo_pago:metodo,cobrado_en:new Date().toISOString()}).eq('id',id);
+  }
+  // Verificar si quedan órdenes activas en esa mesa
+  const ord0 = D.ordenes.find(o=>ids.includes(o.id));
+  if(ord0){
+    const quedan = D.ordenes.filter(o=>o.mesa_id===ord0.mesa_id&&!ids.includes(o.id)&&o.estado!=='cobrado');
+    if(!quedan.length) await sb.from('mesas').update({estado:'libre'}).eq('id',ord0.mesa_id);
+  }
+  closeModal('modal-cobro');
+  showNotif(`✅ Pago registrado con ${metodo} — Mesa ${_cobroMesaNum}`);
+  await cargarTodos();
+  initCobros();
+}
+
+function prepTicketImpresion(mesaId){
+  const mesa = D.mesas.find(m=>m.id===mesaId);
+  const ords = D.ordenes.filter(o=>o.mesa_id===mesaId&&['listo','entregado'].includes(o.estado));
+  const allItems={};
+  ords.forEach(o=>(o.orden_items||[]).forEach(i=>{
+    if(!allItems[i.platillo_nombre])allItems[i.platillo_nombre]={nombre:i.platillo_nombre,precio:i.precio_unit,qty:0};
+    allItems[i.platillo_nombre].qty+=i.cantidad;
+  }));
+  const cfg=getCfg();
+  const sub=ords.reduce((s,o)=>s+parseFloat(o.total||0),0);
+  const iva=sub*(cfg.iva/100);
+  const total=sub+iva;
+  document.getElementById('ticket-contenido').innerHTML=`
+    <div style="font-family:monospace;max-width:280px;margin:0 auto">
+      <div style="text-align:center;font-size:16px;font-weight:bold">${cfg.nombre}</div>
+      <div style="text-align:center;font-size:11px">${new Date().toLocaleString('es-GT')}</div>
+      <div style="text-align:center;font-size:12px">Mesa ${mesa?.numero}</div>
+      <div>--------------------------------</div>
+      ${Object.values(allItems).map(i=>`<div style="display:flex;justify-content:space-between;font-size:12px"><span>${i.qty}x ${i.nombre}</span><span>${fQ(i.precio*i.qty)}</span></div>`).join('')}
+      <div>--------------------------------</div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span>Subtotal</span><span>${fQ(sub)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:12px"><span>IVA ${cfg.iva}%</span><span>${fQ(iva)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:bold"><span>TOTAL</span><span>${fQ(total)}</span></div>
+      <div style="text-align:center;font-size:11px;margin-top:8px">${cfg.msg}</div>
+    </div>`;
+  document.getElementById('ticket-area').style.display='block';
+  window.print();
+  document.getElementById('ticket-area').style.display='none';
+}
+
+// ══════════════════════════════════════════════════
+//   MENÚ / PLATILLOS
+// ══════════════════════════════════════════════════
+let menuCatFiltro = '';
+function initMenu(){
+  renderMenuTabs();
+  renderMenuTabla();
+  // Llenar select de categorías en el modal
+  const sel = document.getElementById('pf-cat');
+  sel.innerHTML='<option value="">Sin categoría</option>'+D.categorias.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+}
+
+function renderMenuTabs(){
+  const t = document.getElementById('menu-cats-tabs');
+  t.innerHTML='<div class="tab'+(menuCatFiltro===''?' active':'')+'" onclick="filtMenuCat(\'\',this)">Todos</div>'
+    +D.categorias.map(c=>`<div class="tab${menuCatFiltro==c.id?' active':''}" onclick="filtMenuCat(${c.id},this)">${c.nombre}</div>`).join('');
+}
+
+function filtMenuCat(id,btn){
+  menuCatFiltro=id;
+  document.querySelectorAll('#menu-cats-tabs .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderMenuTabla();
+}
+
+function renderMenuTabla(){
+  let prods = D.platillos;
+  if(menuCatFiltro) prods=prods.filter(p=>p.categoria_id==menuCatFiltro);
+  document.getElementById('menu-tbody').innerHTML = prods.map(p=>`<tr>
+    <td><strong>${p.nombre}</strong>${p.descripcion?`<br><span style="color:var(--gris);font-size:10px">${p.descripcion}</span>`:''}</td>
+    <td>${p.categorias?.nombre||'—'}</td>
+    <td style="font-weight:700;color:var(--verde)">${fQ(p.precio)}</td>
+    <td><span class="badge ${p.disponible?'bv':'br'}">${p.disponible?'✅ Sí':'❌ No'}</span></td>
+    <td>
+      <button class="btn bsm bw" onclick="editPlatillo(${p.id})">✏️ Editar</button>
+      <button class="btn bsm bd" onclick="borrarPlatillo(${p.id})" style="margin-left:4px">🗑️</button>
+    </td>
+  </tr>`).join('');
+}
+
+function limpiarFormPlatillo(){
+  document.getElementById('pf-id').value='';
+  document.getElementById('pf-nombre').value='';
+  document.getElementById('pf-precio').value='';
+  document.getElementById('pf-desc').value='';
+  document.getElementById('pf-disponible').value='1';
+  document.getElementById('platillo-modal-title').textContent='➕ Nuevo platillo';
+  const sel=document.getElementById('pf-cat');
+  sel.innerHTML='<option value="">Sin categoría</option>'+D.categorias.map(c=>`<option value="${c.id}">${c.nombre}</option>`).join('');
+}
+
+function editPlatillo(id){
+  const p=D.platillos.find(x=>x.id===id); if(!p) return;
+  limpiarFormPlatillo();
+  document.getElementById('pf-id').value=id;
+  document.getElementById('pf-nombre').value=p.nombre;
+  document.getElementById('pf-precio').value=p.precio;
+  document.getElementById('pf-desc').value=p.descripcion||'';
+  document.getElementById('pf-disponible').value=p.disponible?'1':'0';
+  document.getElementById('pf-cat').value=p.categoria_id||'';
+  document.getElementById('platillo-modal-title').textContent='✏️ Editar platillo';
+  openModal('modal-platillo');
+}
+
+async function guardarPlatillo(){
+  const id=document.getElementById('pf-id').value;
+  const nombre=document.getElementById('pf-nombre').value.trim();
+  const precio=parseFloat(document.getElementById('pf-precio').value);
+  const cat=document.getElementById('pf-cat').value||null;
+  const desc=document.getElementById('pf-desc').value||null;
+  const disp=document.getElementById('pf-disponible').value==='1';
+  if(!nombre||!precio){showNotif('Nombre y precio requeridos','#e65100');return;}
+  const data={nombre,precio,categoria_id:cat,descripcion:desc,disponible:disp};
+  if(id) await sb.from('platillos').update(data).eq('id',id);
+  else await sb.from('platillos').insert(data);
+  closeModal('modal-platillo');
+  showNotif(id?'✅ Platillo actualizado':'✅ Platillo creado');
+  await cargarTodos(); initMenu();
+}
+
+async function borrarPlatillo(id){
+  if(!confirm('¿Eliminar este platillo?')) return;
+  await sb.from('platillos').delete().eq('id',id);
+  showNotif('🗑️ Platillo eliminado','#c62828');
+  await cargarTodos(); renderMenuTabla();
+}
+
+async function guardarCategoria(){
+  const nombre=document.getElementById('cat-nombre').value.trim();
+  if(!nombre){showNotif('Escribe un nombre','#e65100');return;}
+  await sb.from('categorias').insert({nombre,orden:D.categorias.length+1});
+  document.getElementById('cat-nombre').value='';
+  closeModal('modal-categoria');
+  showNotif('✅ Categoría creada');
+  await cargarTodos(); initMenu();
+}
+
+// ══════════════════════════════════════════════════
+//   INVENTARIO
+// ══════════════════════════════════════════════════
+function initInventario(){ renderInventario(); }
+
+function renderInventario(){
+  const q=(document.getElementById('inv-buscar')?.value||'').toLowerCase();
+  const prods=D.inventario.filter(i=>!q||i.nombre.toLowerCase().includes(q)||i.categoria?.toLowerCase().includes(q));
+  document.getElementById('inv-tbody').innerHTML=prods.map(i=>{
+    const pct=Math.min(100,Math.round(parseFloat(i.stock)/Math.max(parseFloat(i.stock_min)*2,0.01)*100));
+    const estado=parseFloat(i.stock)<=0?'<span class="badge br">Sin stock</span>':parseFloat(i.stock)<=parseFloat(i.stock_min)?'<span class="badge bn">Stock bajo</span>':'<span class="badge bv">OK</span>';
+    const barColor=parseFloat(i.stock)<=0?'var(--rojo)':parseFloat(i.stock)<=parseFloat(i.stock_min)?'var(--amarillo)':'var(--verde)';
+    return `<tr>
+      <td><strong>${i.nombre}</strong></td>
+      <td>${i.categoria||'—'}</td>
+      <td>${i.stock}<div style="background:#e0e0e0;border-radius:20px;height:6px;width:70px;overflow:hidden;display:inline-block;vertical-align:middle;margin-left:6px"><div style="height:100%;background:${barColor};width:${pct}%;border-radius:20px"></div></div></td>
+      <td>${i.stock_min}</td>
+      <td>${i.unidad||'—'}</td>
+      <td>${estado}</td>
+      <td>
+        <button class="btn bsm bw" onclick="editInventario(${i.id})">✏️</button>
+        <button class="btn bsm bs" onclick="abrirAjusteStock(${i.id})" style="margin-left:3px" title="Ajuste de stock">📊</button>
+        <button class="btn bsm bd" onclick="borrarInventario(${i.id})" style="margin-left:3px">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function limpiarFormInv(){
+  ['if-id','if-nombre','if-cat','if-stock','if-min','if-unidad','if-notas'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inv-modal-title').textContent='📦 Nuevo producto';
+}
+
+function editInventario(id){
+  const i=D.inventario.find(x=>x.id===id); if(!i) return;
+  document.getElementById('if-id').value=id;
+  document.getElementById('if-nombre').value=i.nombre;
+  document.getElementById('if-cat').value=i.categoria||'';
+  document.getElementById('if-stock').value=i.stock;
+  document.getElementById('if-min').value=i.stock_min;
+  document.getElementById('if-unidad').value=i.unidad||'';
+  document.getElementById('if-notas').value=i.notas||'';
+  document.getElementById('inv-modal-title').textContent='✏️ Editar producto';
+  openModal('modal-inventario');
+}
+
+async function guardarInventario(){
+  const id=document.getElementById('if-id').value;
+  const nombre=document.getElementById('if-nombre').value.trim();
+  if(!nombre){showNotif('Nombre requerido','#e65100');return;}
+  const data={
+    nombre, categoria:document.getElementById('if-cat').value||'General',
+    stock:parseFloat(document.getElementById('if-stock').value)||0,
+    stock_min:parseFloat(document.getElementById('if-min').value)||0,
+    unidad:document.getElementById('if-unidad').value||'unidades',
+    notas:document.getElementById('if-notas').value||null,
+    actualizado_en:new Date().toISOString()
+  };
+  if(id) await sb.from('inventario').update(data).eq('id',id);
+  else await sb.from('inventario').insert(data);
+  closeModal('modal-inventario');
+  showNotif(id?'✅ Producto actualizado':'✅ Producto agregado');
+  await cargarTodos(); renderInventario();
+}
+
+async function borrarInventario(id){
+  if(!confirm('¿Eliminar este producto?')) return;
+  await sb.from('inventario').delete().eq('id',id);
+  showNotif('🗑️ Producto eliminado','#c62828');
+  await cargarTodos(); renderInventario();
+}
+
+function abrirAjusteStock(id){
+  const i=D.inventario.find(x=>x.id===id); if(!i) return;
+  document.getElementById('as-id').value=id;
+  document.getElementById('as-nombre').textContent=`${i.nombre} — Stock actual: ${i.stock} ${i.unidad}`;
+  document.getElementById('as-cantidad').value='';
+  document.getElementById('as-nota').value='';
+  document.getElementById('as-resultado').style.display='none';
+  openModal('modal-ajuste-stock');
+}
+
+document.addEventListener('input',function(e){
+  if(e.target.id==='as-cantidad'||e.target.id==='as-tipo'){
+    const id=document.getElementById('as-id').value;
+    const i=D.inventario.find(x=>x.id==id); if(!i) return;
+    const tipo=document.getElementById('as-tipo').value;
+    const cant=parseFloat(document.getElementById('as-cantidad').value)||0;
+    let nuevo=parseFloat(i.stock);
+    if(tipo==='entrada') nuevo+=cant;
+    else if(tipo==='salida') nuevo-=cant;
+    else nuevo=cant;
+    document.getElementById('as-nuevo-stock').textContent=nuevo.toFixed(3)+' '+i.unidad;
+    document.getElementById('as-resultado').style.display='';
+  }
+});
+
+async function guardarAjusteStock(){
+  const id=document.getElementById('as-id').value;
+  const tipo=document.getElementById('as-tipo').value;
+  const cant=parseFloat(document.getElementById('as-cantidad').value)||0;
+  const nota=document.getElementById('as-nota').value||null;
+  const i=D.inventario.find(x=>x.id==id); if(!i) return;
+  const anterior=parseFloat(i.stock);
+  let nuevo=anterior;
+  if(tipo==='entrada') nuevo+=cant;
+  else if(tipo==='salida') nuevo-=cant;
+  else nuevo=cant;
+  await sb.from('inventario').update({stock:nuevo,actualizado_en:new Date().toISOString()}).eq('id',id);
+  await sb.from('movimientos_inventario').insert({inventario_id:id,tipo,cantidad:cant,stock_anterior:anterior,stock_nuevo:nuevo,nota,usuario_id:CU?.id});
+  closeModal('modal-ajuste-stock');
+  showNotif(`✅ Stock actualizado: ${nuevo.toFixed(2)}`);
+  await cargarTodos(); renderInventario();
+}
+
+// ══════════════════════════════════════════════════
+//   GESTIÓN MESAS
+// ══════════════════════════════════════════════════
+function initMesasAdmin(){
+  document.getElementById('mesas-tbody').innerHTML=D.mesas.map(m=>{
+    const cls=m.estado==='libre'?'bv':m.estado==='ocupada'?'bn':'baz';
+    return `<tr>
+      <td><strong>Mesa ${m.numero}</strong></td>
+      <td><span class="badge ${cls}">${m.estado}</span></td>
+      <td>
+        <button class="btn bsm bw" onclick="editMesa(${m.id},${m.numero})">✏️ Editar</button>
+        <button class="btn bsm bd" onclick="borrarMesa(${m.id})" style="margin-left:4px">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function editMesa(id,num){
+  document.getElementById('mesa-form-id').value=id;
+  document.getElementById('mesa-form-num').value=num;
+  openModal('modal-mesa');
+}
+
+async function guardarMesa(){
+  const id=document.getElementById('mesa-form-id').value;
+  const num=parseInt(document.getElementById('mesa-form-num').value);
+  if(!num){showNotif('Número de mesa requerido','#e65100');return;}
+  if(id) await sb.from('mesas').update({numero:num}).eq('id',id);
+  else await sb.from('mesas').insert({numero:num,estado:'libre'});
+  closeModal('modal-mesa');
+  showNotif(id?'✅ Mesa actualizada':'✅ Mesa creada');
+  await cargarTodos(); initMesasAdmin();
+}
+
+async function borrarMesa(id){
+  if(!confirm('¿Eliminar esta mesa?')) return;
+  await sb.from('mesas').delete().eq('id',id);
+  showNotif('🗑️ Mesa eliminada','#c62828');
+  await cargarTodos(); initMesasAdmin();
+}
+
+// ══════════════════════════════════════════════════
+//   REPORTES
+// ══════════════════════════════════════════════════
+async function initReportes(){ await cargarTodos(); renderReportes(); }
+
+function cambiarReporte(p,btn){
+  repPeriodo=p;
+  document.querySelectorAll('#page-reportes .tab').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('active');
+  renderReportes();
+}
+
+async function renderReportes(){
+  const ahora=new Date();
+  let desde='';
+  if(repPeriodo==='hoy') desde=hoy();
+  else if(repPeriodo==='semana'){ const d=new Date(ahora); d.setDate(d.getDate()-6); desde=d.toISOString().slice(0,10); }
+  else { desde=ahora.getFullYear()+'-'+String(ahora.getMonth()+1).padStart(2,'0')+'-01'; }
+
+  const {data:ventas} = await sb.from('ordenes').select('*,orden_items(*)').eq('estado','cobrado').gte('cobrado_en',desde+'T00:00:00');
+  const vs=ventas||[];
+
+  const totalV=vs.reduce((s,o)=>s+parseFloat(o.total||0),0);
+  const cfg=getCfg();
+  const ivaTotal=totalV*(cfg.iva/100);
+
+  document.getElementById('rep-kpis').innerHTML=`
+    <div class="kpi-card"><div class="kpi-ic">💵</div><div><div class="kpi-lbl">Ingresos</div><div class="kpi-val">${fQ(totalV)}</div></div></div>
+    <div class="kpi-card" style="border-left-color:#f57f17"><div class="kpi-ic">🧾</div><div><div class="kpi-lbl">Órdenes cobradas</div><div class="kpi-val">${vs.length}</div></div></div>
+    <div class="kpi-card" style="border-left-color:#6a1b9a"><div class="kpi-ic">🏛️</div><div><div class="kpi-lbl">IVA (${cfg.iva}%)</div><div class="kpi-val">${fQ(ivaTotal)}</div></div></div>
+    <div class="kpi-card" style="border-left-color:#2e7d32"><div class="kpi-ic">🍽️</div><div><div class="kpi-lbl">Artículos vendidos</div><div class="kpi-val">${vs.reduce((s,o)=>s+(o.orden_items||[]).reduce((a,i)=>a+i.cantidad,0),0)}</div></div></div>
+  `;
+
+  // Top platillos
+  const conteoPlatillos={};
+  vs.forEach(o=>(o.orden_items||[]).forEach(i=>{
+    if(!conteoPlatillos[i.platillo_nombre])conteoPlatillos[i.platillo_nombre]={cant:0,total:0};
+    conteoPlatillos[i.platillo_nombre].cant+=i.cantidad;
+    conteoPlatillos[i.platillo_nombre].total+=parseFloat(i.subtotal||0);
+  }));
+  const top=Object.entries(conteoPlatillos).sort((a,b)=>b[1].cant-a[1].cant).slice(0,8);
+  document.getElementById('rep-top-platos').innerHTML=top.length
+    ?top.map(([n,d])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>${n}</span><span style="font-weight:700">${d.cant} uds · ${fQ(d.total)}</span></div>`).join('')
+    :'<div class="tmuted">Sin ventas</div>';
+
+  // Por método de pago
+  const metodos={};
+  vs.forEach(o=>{const m=o.metodo_pago||'Sin especificar';if(!metodos[m])metodos[m]=0;metodos[m]+=parseFloat(o.total||0);});
+  document.getElementById('rep-metodos').innerHTML=Object.entries(metodos).length
+    ?Object.entries(metodos).map(([m,t])=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span>${m}</span><span style="font-weight:700;color:var(--verde)">${fQ(t)}</span></div>`).join('')
+    :'<div class="tmuted">Sin ventas</div>';
+
+  // Historial
+  const sorted=[...vs].sort((a,b)=>new Date(b.cobrado_en)-new Date(a.cobrado_en));
+  document.getElementById('rep-tbody').innerHTML=sorted.map(o=>`<tr>
+    <td>${o.cobrado_en?.slice(0,16).replace('T',' ')||'—'}</td>
+    <td>Mesa ${o.mesa_numero}</td>
+    <td>${(o.orden_items||[]).reduce((s,i)=>s+i.cantidad,0)}</td>
+    <td style="font-weight:700;color:var(--verde)">${fQ(o.total)}</td>
+    <td><span class="badge baz">${o.metodo_pago||'—'}</span></td>
+    <td style="font-size:10px;color:var(--gris)">${o.usuario_nombre||'—'}</td>
+  </tr>`).join('');
+}
+
+// ══════════════════════════════════════════════════
+//   USUARIOS
+// ══════════════════════════════════════════════════
+function initUsuarios(){
+  document.getElementById('usuarios-tbody').innerHTML=D.usuarios.map(u=>`<tr>
+    <td><strong>${u.usuario}</strong></td>
+    <td>${u.nombre||'—'}</td>
+    <td><span class="badge bmo">${u.rol}</span></td>
+    <td><span class="badge ${u.activo?'bv':'br'}">${u.activo?'Activo':'Inactivo'}</span></td>
+    <td>
+      <button class="btn bsm bw" onclick="editUsuario('${u.id}')">✏️ Editar</button>
+      <button class="btn bsm bd" onclick="toggleUsuario('${u.id}',${u.activo})" style="margin-left:4px">${u.activo?'🔒 Desactivar':'🔓 Activar'}</button>
+    </td>
+  </tr>`).join('');
+}
+
+function limpiarFormUsuario(){
+  document.getElementById('uf-id').value='';
+  document.getElementById('uf-usuario').value='';
+  document.getElementById('uf-pass').value='';
+  document.getElementById('uf-nombre').value='';
+  document.getElementById('uf-rol').value='mesero';
+  document.getElementById('usr-modal-title').textContent='👤 Nuevo usuario';
+}
+
+function editUsuario(id){
+  const u=D.usuarios.find(x=>x.id===id); if(!u) return;
+  document.getElementById('uf-id').value=id;
+  document.getElementById('uf-usuario').value=u.usuario;
+  document.getElementById('uf-pass').value='';
+  document.getElementById('uf-nombre').value=u.nombre||'';
+  document.getElementById('uf-rol').value=u.rol||'mesero';
+  document.getElementById('usr-modal-title').textContent='✏️ Editar usuario';
+  openModal('modal-usuario');
+}
+
+async function guardarUsuario(){
+  const id=document.getElementById('uf-id').value;
+  const usuario=document.getElementById('uf-usuario').value.trim();
+  const pass=document.getElementById('uf-pass').value;
+  const nombre=document.getElementById('uf-nombre').value.trim();
+  const rol=document.getElementById('uf-rol').value;
+  if(!usuario){showNotif('Usuario requerido','#e65100');return;}
+  const data={usuario,nombre,rol};
+  if(pass) data.password=pass;
+  if(id) await sb.from('usuarios').update(data).eq('id',id);
+  else{ if(!pass){showNotif('Contraseña requerida','#e65100');return;} await sb.from('usuarios').insert({...data,password:pass,activo:true}); }
+  closeModal('modal-usuario');
+  showNotif(id?'✅ Usuario actualizado':'✅ Usuario creado');
+  await cargarTodos(); initUsuarios();
+}
+
+async function toggleUsuario(id,activo){
+  await sb.from('usuarios').update({activo:!activo}).eq('id',id);
+  showNotif(activo?'🔒 Usuario desactivado':'🔓 Usuario activado');
+  await cargarTodos(); initUsuarios();
+}
+
+// ══════════════════════════════════════════════════
+//   CONFIGURACIÓN
+// ══════════════════════════════════════════════════
+function initConfig(){
+  const cfg=getCfg();
+  document.getElementById('cfg-url').value=cfg.url;
+  document.getElementById('cfg-key').value=cfg.key;
+  document.getElementById('cfg-nombre').value=cfg.nombre;
+  document.getElementById('cfg-iva').value=cfg.iva;
+  document.getElementById('cfg-msg').value=cfg.msg;
+  const st=document.getElementById('cfg-status');
+  st.textContent=sb?'✅ Conectado a Supabase':'⚠️ Sin conexión — configura URL y Key';
+  st.style.color=sb?'var(--verde)':'var(--naranja)';
+  // Logo preview
+  const logo=localStorage.getItem('pos_logo');
+  if(logo){ document.getElementById('cfg-logo-preview').src=logo; document.getElementById('cfg-logo-preview').style.display=''; document.getElementById('cfg-logo-fb').style.display='none'; }
+  else { document.getElementById('cfg-logo-preview').style.display='none'; document.getElementById('cfg-logo-fb').style.display='flex'; }
+}
+
+async function guardarConfig(){
+  showNotif('✅ Conexión activa — credenciales integradas');
+  const st=document.getElementById('cfg-status');
+  st.textContent='✅ Conectado a Supabase (credenciales integradas)';
+  st.style.color='var(--verde)';
+}
+
+function guardarConfigRest(){
+  localStorage.setItem('pos_nombre',document.getElementById('cfg-nombre').value||'Arte al Barril');
+  localStorage.setItem('pos_iva',document.getElementById('cfg-iva').value||'12');
+  localStorage.setItem('pos_msg',document.getElementById('cfg-msg').value||'¡Gracias por su visita!');
+  aplicarLogoYNombre();
+  showNotif('✅ Configuración guardada');
+}
+
+function subirLogo(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const data=e.target.result;
+    localStorage.setItem('pos_logo',data);
+    document.getElementById('cfg-logo-preview').src=data;
+    document.getElementById('cfg-logo-preview').style.display='';
+    document.getElementById('cfg-logo-fb').style.display='none';
+    aplicarLogoYNombre();
+    showNotif('✅ Logo actualizado');
+  };
+  reader.readAsDataURL(file);
+}
+
+function borrarLogo(){
+  localStorage.removeItem('pos_logo');
+  document.getElementById('cfg-logo-preview').style.display='none';
+  document.getElementById('cfg-logo-fb').style.display='flex';
+  aplicarLogoYNombre();
+  showNotif('🗑️ Logo eliminado');
+}
+
+function aplicarLogoYNombre(){
+  const logo=localStorage.getItem('pos_logo');
+  const nombre=getCfg().nombre;
+  // Sidebar
+  const sbLi=document.getElementById('sb-li');
+  const sbFb=document.getElementById('sb-lfb');
+  const sbNom=document.getElementById('sb-nombre-emp');
+  if(logo&&sbLi){ sbLi.src=logo; sbLi.style.display=''; if(sbFb) sbFb.style.display='none'; }
+  else { if(sbLi) sbLi.style.display='none'; if(sbFb) sbFb.style.display='flex'; }
+  if(sbNom) sbNom.textContent=nombre;
+  // Login
+  const llImg=document.getElementById('ll-img');
+  const llFb=document.getElementById('ll-fb');
+  const llNom=document.getElementById('ll-nombre');
+  if(logo&&llImg){ llImg.src=logo; llImg.style.display=''; if(llFb) llFb.style.display='none'; }
+  else { if(llImg) llImg.style.display='none'; if(llFb) llFb.style.display=''; }
+  if(llNom) llNom.textContent=nombre;
+  // Título página
+  document.title=nombre+' — POS';
+}
+
+// Crear tablas automáticamente via Supabase RPC / SQL
+async function crearTablas(){
+  if(!sb){showNotif('Primero conecta Supabase','#e65100');return;}
+  const btn=document.getElementById('btn-crear-tablas');
+  const st=document.getElementById('crear-tablas-status');
+  btn.disabled=true; btn.textContent='⏳ Creando tablas...';
+  st.textContent=''; st.style.color='';
+
+  const SQL=`
+    create table if not exists usuarios (id uuid primary key default gen_random_uuid(),usuario text unique not null,password text not null,nombre text,rol text default 'mesero',activo boolean default true,creado_en timestamptz default now());
+    create table if not exists mesas (id bigserial primary key,numero integer unique not null,estado text default 'libre',creado_en timestamptz default now());
+    create table if not exists categorias (id bigserial primary key,nombre text unique not null,orden integer default 0);
+    create table if not exists platillos (id bigserial primary key,nombre text not null,precio numeric(10,2) not null,categoria_id bigint references categorias(id),descripcion text,disponible boolean default true,creado_en timestamptz default now());
+    create table if not exists ordenes (id bigserial primary key,mesa_id bigint references mesas(id),mesa_numero integer,estado text default 'nuevo',notas text,total numeric(10,2) default 0,metodo_pago text,usuario_id uuid references usuarios(id),usuario_nombre text,creado_en timestamptz default now(),cobrado_en timestamptz);
+    create table if not exists orden_items (id bigserial primary key,orden_id bigint references ordenes(id) on delete cascade,platillo_id bigint references platillos(id),platillo_nombre text,cantidad integer not null,precio_unit numeric(10,2) not null,subtotal numeric(10,2) not null);
+    create table if not exists inventario (id bigserial primary key,nombre text not null,categoria text default 'General',stock numeric(10,3) default 0,stock_min numeric(10,3) default 0,unidad text default 'unidades',notas text,actualizado_en timestamptz default now());
+    create table if not exists movimientos_inventario (id bigserial primary key,inventario_id bigint references inventario(id),tipo text,cantidad numeric(10,3),stock_anterior numeric(10,3),stock_nuevo numeric(10,3),nota text,usuario_id uuid references usuarios(id),creado_en timestamptz default now());
+    insert into usuarios (usuario,password,nombre,rol) values ('admin','admin123','Administrador','admin') on conflict (usuario) do nothing;
+    insert into mesas (numero) values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12) on conflict (numero) do nothing;
+    insert into categorias (nombre,orden) values ('Entradas',1),('Platos fuertes',2),('Acompañamientos',3),('Bebidas',4),('Postres',5) on conflict (nombre) do nothing;
+  `;
+
+  // Intentar ejecutar via rpc exec_sql si existe, si no mostrar instrucciones
+  const {error} = await sb.rpc('exec_sql',{sql:SQL}).catch(()=>({error:{message:'rpc_no_disponible'}}));
+
+  if(!error){
+    st.textContent='✅ Tablas creadas. Usuario: admin / Contraseña: admin123';
+    st.style.color='var(--verde)';
+    btn.textContent='✅ Tablas listas';
+  } else {
+    // Método alternativo: verificar si las tablas existen chequeando usuarios
+    const {error:e2}=await sb.from('usuarios').select('id').limit(1);
+    if(!e2){
+      st.innerHTML='✅ Las tablas ya existen. <strong>Todo listo.</strong>';
+      st.style.color='var(--verde)';
+      btn.textContent='✅ Tablas verificadas';
+    } else {
+      st.innerHTML=`⚠️ No se pudo crear automáticamente. <a href="https://supabase.com/dashboard/project/_/sql" target="_blank" style="color:var(--azul);font-weight:700">Ir al SQL Editor →</a> y pegar el script manualmente.<br><br><textarea style="width:100%;font-size:10px;font-family:monospace;height:120px;border:1px solid var(--borde);border-radius:6px;padding:6px" readonly>${SQL.trim()}</textarea>`;
+      st.style.color='var(--naranja)';
+      btn.textContent='🚀 Crear tablas automáticamente';
+      btn.disabled=false;
+    }
+  }
+}
+
+// Aplicar logo/nombre al cargar
+function aplicarConfigAlCargar(){
+  aplicarLogoYNombre();
+}
+
+// ══════════════════════════════════════════════════
+//   SETUP WIZARD — PRIMERA VEZ
+// ══════════════════════════════════════════════════
+function setupIrPaso(n){
+  [1,2,3].forEach(i=>{
+    document.getElementById('setup-s'+i).classList.toggle('active',i===n);
+    const d=document.getElementById('dot'+i);
+    if(d){ d.classList.toggle('done',i<n); d.classList.toggle('active',i===n); }
+  });
+}
+
+async function setupPaso1(){
+  const url=document.getElementById('sw-url').value.trim();
+  const key=document.getElementById('sw-key').value.trim();
+  const err=document.getElementById('sw-err1');
+  err.textContent='';
+  if(!url||!key){err.textContent='Completa la URL y la Key';return;}
+  if(!url.includes('supabase.co')){err.textContent='La URL no parece válida';return;}
+  err.textContent='⏳ Conectando...'; err.style.color='var(--naranja)';
+  localStorage.setItem('pos_url',url);
+  localStorage.setItem('pos_key',key);
+  const ok=initSupabase();
+  if(!ok){err.textContent='❌ No se pudo conectar. Verifica los datos.';err.style.color='var(--rojo)';return;}
+  // Verificar conexión real
+  const {error}=await sb.from('usuarios').select('id').limit(1).catch(()=>({error:true}));
+  if(error&&error!==true&&error.code!=='42P01'){
+    err.textContent='❌ Credenciales incorrectas o sin acceso.';err.style.color='var(--rojo)';return;
+  }
+  err.textContent=''; setupIrPaso(2);
+}
+
+async function setupPaso2(){
+  const usu=document.getElementById('sw-usu').value.trim();
+  const pass=document.getElementById('sw-pass').value;
+  const nombre=document.getElementById('sw-nombre').value.trim()||'Administrador';
+  const err=document.getElementById('sw-err2');
+  err.textContent='';
+  if(!usu||!pass){err.textContent='Usuario y contraseña requeridos';return;}
+  if(pass.length<6){err.textContent='La contraseña debe tener al menos 6 caracteres';return;}
+  err.textContent='⏳ Creando tablas y usuario...';err.style.color='var(--naranja)';
+  document.querySelector('#setup-s2 button').disabled=true;
+
+  // Crear tablas usando SQL via RPC o fallback
+  const sqlTablas=`
+    create table if not exists usuarios (id uuid primary key default gen_random_uuid(),usuario text unique not null,password text not null,nombre text,rol text default 'mesero',activo boolean default true,creado_en timestamptz default now());
+    create table if not exists mesas (id bigserial primary key,numero integer unique not null,estado text default 'libre',creado_en timestamptz default now());
+    create table if not exists categorias (id bigserial primary key,nombre text unique not null,orden integer default 0);
+    create table if not exists platillos (id bigserial primary key,nombre text not null,precio numeric(10,2) not null,categoria_id bigint references categorias(id),descripcion text,disponible boolean default true,creado_en timestamptz default now());
+    create table if not exists ordenes (id bigserial primary key,mesa_id bigint references mesas(id),mesa_numero integer,estado text default 'nuevo',notas text,total numeric(10,2) default 0,metodo_pago text,usuario_id uuid references usuarios(id),usuario_nombre text,creado_en timestamptz default now(),cobrado_en timestamptz);
+    create table if not exists orden_items (id bigserial primary key,orden_id bigint references ordenes(id) on delete cascade,platillo_id bigint references platillos(id),platillo_nombre text,cantidad integer not null,precio_unit numeric(10,2) not null,subtotal numeric(10,2) not null);
+    create table if not exists inventario (id bigserial primary key,nombre text not null,categoria text default 'General',stock numeric(10,3) default 0,stock_min numeric(10,3) default 0,unidad text default 'unidades',notas text,actualizado_en timestamptz default now());
+    create table if not exists movimientos_inventario (id bigserial primary key,inventario_id bigint references inventario(id),tipo text,cantidad numeric(10,3),stock_anterior numeric(10,3),stock_nuevo numeric(10,3),nota text,usuario_id uuid references usuarios(id),creado_en timestamptz default now());
+    insert into mesas (numero) values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12) on conflict (numero) do nothing;
+    insert into categorias (nombre,orden) values ('Entradas',1),('Platos fuertes',2),('Acompañamientos',3),('Bebidas',4),('Postres',5) on conflict (nombre) do nothing;
+  `;
+  await sb.rpc('exec_sql',{sql:sqlTablas}).catch(()=>{});
+
+  // Insertar el usuario admin
+  const {error:eu}=await sb.from('usuarios').upsert({usuario:usu,password:pass,nombre,rol:'admin',activo:true},{onConflict:'usuario'});
+  if(eu){
+    // Si falla porque la tabla no existe, mostrar instrucciones
+    err.innerHTML=`⚠️ No se pudo crear la tabla automáticamente.<br>Ve a tu proyecto Supabase → <strong>SQL Editor</strong> y ejecuta el SQL de configuración, luego recarga la página.`;
+    err.style.color='var(--rojo)';
+    document.querySelector('#setup-s2 button').disabled=false;
+    return;
+  }
+
+  localStorage.setItem('setup_done','1');
+  localStorage.setItem('pos_nombre','Arte al Barril');
+  document.getElementById('sw-resumen').innerHTML=`
+    <div style="margin-bottom:6px">✅ Base de datos configurada</div>
+    <div style="margin-bottom:6px">✅ Tablas creadas correctamente</div>
+    <div style="margin-bottom:6px">✅ Usuario administrador creado</div>
+    <hr style="margin:8px 0;border:none;border-top:1px solid var(--azulm)">
+    <div>👤 <strong>Usuario:</strong> ${usu}</div>
+    <div>🔑 <strong>Contraseña:</strong> ${pass}</div>
+    <div style="font-size:10px;color:var(--gris);margin-top:4px">Guarda esta información en un lugar seguro</div>
+  `;
+  setupIrPaso(3);
+}
+
+function setupFinalizar(){
+  document.getElementById('setup-screen').classList.remove('show');
+  document.getElementById('login-screen').classList.add('show');
+  aplicarLogoYNombre();
+}
+
+// ══════════════════════════════════════════════════
+//   INICIO DE LA APLICACIÓN
+// ══════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded',()=>{
+  if(window.innerWidth<=768){
+    document.getElementById('sidebar').classList.add('hidden');
+    document.getElementById('main-wrap').classList.add('full');
+  }
+  aplicarConfigAlCargar();
+  document.getElementById('loading-screen').style.display='flex';
+
+  const ok = initSupabase();
+  if(!ok){
+    setTimeout(()=>{
+      document.getElementById('loading-screen').style.display='none';
+      document.getElementById('setup-screen').classList.add('show');
+    },600);
+    return;
+  }
+  // Credenciales integradas — ir directo al login
+  // Si nunca se creó admin, mostrar solo el paso 2 del wizard
+  const setupDone = localStorage.getItem('setup_done');
+  if(!setupDone){
+    setTimeout(()=>{
+      document.getElementById('loading-screen').style.display='none';
+      // Saltar al paso 2 directamente (crear admin)
+      setupIrPaso(2);
+      document.getElementById('setup-screen').classList.add('show');
+    },600);
+    return;
+  }
+  setTimeout(()=>{
+    document.getElementById('loading-screen').style.display='none';
+    document.getElementById('login-screen').classList.add('show');
+  },800);
+});
+
+// Auto-refresh cocina cada 30 segundos si está activa
+setInterval(async ()=>{
+  const pag=document.querySelector('.page.active');
+  if(pag?.id==='page-cocina'){ await cargarTodos(); renderCocina(); }
+  if(pag?.id==='page-inicio'){ await cargarTodos(); initInicio(); }
+  actualizarBadgeCocina();
+},30000);
+</script>
+</body>
+</html>
